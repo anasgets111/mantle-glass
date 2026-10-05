@@ -1,4 +1,4 @@
--- Tables: a sortable multi-select table, an outline and a tab view.
+-- Tables: a sortable multi-select table, an outline, a table wider than its box and a tab view.
 local section = require("demo.section")
 local glass = require("glass")
 
@@ -115,6 +115,19 @@ local tree = glass.outline("tree", {
     },
 })
 
+local wide = glass.table("wide", {
+    items = FILES,
+    max_height = 168,
+    columns = {
+        { key = "name", title = "Name", width = 180, cell = function(f, e) return secondary(f.name, e) end },
+        { key = "kind", title = "Kind", width = 160, cell = function(f, e) return secondary(f.kind, e) end },
+        { key = "size", title = "Size", width = 120, align = "end", cell = function(f, e) return secondary(bytes(f.size), e, "end") end },
+        { key = "date", title = "Date Modified", width = 180, cell = function(f, e) return secondary(f.date, e) end },
+        { key = "created", title = "Date Created", width = 180, cell = function(f, e) return secondary(f.date, e) end },
+        { key = "label", title = "Label", width = 160, cell = function(f, e) return secondary(f.kind, e) end },
+    },
+})
+
 local function note(msg) return glass.text(msg, c.secondary_label, "body") end
 local tabs = column { width = 460, children = { glass.tab_view("tabs", {
     height = 90,
@@ -133,5 +146,6 @@ return section.page {
         column { width = 700, spacing = 8, children = { files, glass.text(summary, c.label, "headline", { width = "fill", elide = "end" }) } },
         column { width = 520, spacing = 8, children = { tree, note("Left and Right collapse and expand.") } },
     } }),
+    section.section("Horizontal scroll", "Columns wider than the table scroll sideways, header and rows together, with a knob along the bottom. Scrolling shows the overlay knobs: Left and Right, a horizontal wheel, or Shift+wheel over the header.", column { width = 700, spacing = 8, children = { wide } }),
     section.section("Tab view", "A segmented control over a group box; the content swaps in place.", tabs),
 }

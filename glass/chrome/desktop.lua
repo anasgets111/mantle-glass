@@ -13,6 +13,9 @@ local BAR = { height = 34, item = 24, inset = 10, trailing_inset = 20, gap = 4, 
 local DOCK = { height = 58, radius = 15, icon = 36, gap = 9, pad = 8, dot = 4, dot_gap = 3, separator = { 1, 41, 11 } }
 -- not in the kit: an app tile's corner, as native app icons round about 22% of their side
 local TILE_RADIUS = 8
+-- not in the kit: how far the Dock magnifies and over how many px, and the launch hop, as native apps do.
+local MAGNIFY = { scale = 1.6, spread = 100 }
+local HOP = { duration = 260, easing = "out_quad", loops = "infinite", keyframes = { { x = 0, y = 0 }, { x = 0, y = -16 }, { value = { x = 0, y = 0 }, easing = "in_quad" } } }
 
 ---@class glass.MenuBarMenu
 ---@field title? string
@@ -103,12 +106,14 @@ end
 ---@field color? string A `theme.SYSTEM` name for the tile; default "blue".
 ---@field image? string An app icon's path instead of the tile.
 ---@field running? boolean|Signal<boolean> Draws the dot under it.
+---@field bouncing? boolean|Signal<boolean> The icon hops while true, as an app does while it launches.
 ---@field on_click? fun()
 ---@field separator? boolean Divides apps from folders and the Trash.
 ---@field [string] "no such property"
 
 ---@class glass.DockOpts
 ---@field items glass.DockItem[]
+---@field magnify? boolean Icons under the pointer swell, their neighbours less, and the shelf grows with them.
 ---@field window? string The panel its labels draw over; default `core.window`.
 ---@field [string] "no such property"
 
@@ -127,12 +132,54 @@ local function tile(item)
     })
 end
 
--- The Dock: a glass shelf of app icons with running dots and a separator.
--- ponytail: no magnification or bounce; icons press darker only.
+-- Where each item rests: its left edge and width, and the shelf's width.
+local function rest_layout(items)
+    local at, x = {}, DOCK.pad
+    for i, item in ipairs(items) do
+        local w = item.separator and DOCK.separator[3] or DOCK.icon
+        at[i] = { left = x, width = w, grows = not item.separator }
+        x = x + w + DOCK.gap
+    end
+    return at, x - DOCK.gap + DOCK.pad
+end
+
+-- Magnification for a pointer at `q` in rest coordinates (nil: none). Each icon grows by a cosine
+-- of its distance; the shelf widens by the sum, and `before` is the growth left of `q`, so the
+-- point under the pointer stays put. `shift[i]` slides item i by the growth before it and half its own.
+local function fisheye(at, q)
+    local scale, shift, before, total = {}, {}, 0, 0
+    for i, r in ipairs(at) do
+        local s = 1
+        if q and r.grows then
+            local d = math.abs(q - (r.left + r.width / 2))
+            if d < MAGNIFY.spread then
+                s = 1 + (MAGNIFY.scale - 1) * (1 + math.cos(math.pi * d / MAGNIFY.spread)) / 2
+            end
+        end
+        local extra = (s - 1) * r.width
+        scale[i], shift[i] = s, total + extra / 2
+        if q then
+            before = before + extra * math.max(0, math.min(1, (q - r.left) / r.width))
+        end
+        total = total + extra
+    end
+    return { scale = scale, shift = shift, before = before, total = total }
+end
+
+-- The Dock: a glass shelf of app icons with running dots and a separator. `magnify` swells the
+-- icons near the pointer; an item's `bouncing` hops its icon.
 ---@param id string
 ---@param opts glass.DockOpts
 ---@return Node
 function M.dock(id, opts)
+    local at, rest_width = rest_layout(opts.items)
+    -- The pointer is read on a box of the shelf's resting width, so growth never moves what it measures.
+    ---@type Signal<{ x: number, y: number }?>?, Signal<table>?
+    local at_pointer, swell
+    if opts.magnify then
+        at_pointer = pointer("glass_dock_" .. id)
+        swell = at_pointer:map(function(p) return fisheye(at, p and p.x) end)
+    end
     local kids = {}
     for i, item in ipairs(opts.items) do
         if item.separator then
@@ -140,6 +187,8 @@ function M.dock(id, opts)
                 width = DOCK.separator[3],
                 height = DOCK.separator[2],
                 align_v = "center",
+                translate = swell and swell:map(function(f) return { x = f.shift[i] } end),
+                animate = swell and { translate = theme.motion.snappy },
                 children = { rect { width = DOCK.separator[1], height = "fill", align_h = "center", background = "#404040" } },
             }
         else
@@ -148,11 +197,24 @@ function M.dock(id, opts)
             props.effect = held:map(function(down) return down and { brightness = 0.7 } or {} end)
             local running = type(item.running) == "userdata" and item.running
                 or theme.dark:map(function() return item.running == true end)
+            local bouncing = type(item.bouncing) == "userdata" and item.bouncing
+                or theme.dark:map(function() return item.bouncing == true end)
+            props.translate = swell and swell:map(function(f) return { x = f.shift[i] } end)
+            props.animate = swell and { translate = theme.motion.snappy }
             props.children = {
                 column {
                     spacing = DOCK.dot_gap,
                     children = {
-                        tile(item),
+                        rect {
+                            width = DOCK.icon,
+                            height = DOCK.icon,
+                            origin = { x = 0.5, y = 1 },
+                            scale = swell and swell:map(function(f) return f.scale[i] end),
+                            animate = computed({ bouncing, theme.motion.snappy }, function(on, m)
+                                return { scale = m, translate = on and HOP or nil }
+                            end),
+                            children = { tile(item) },
+                        },
                         rect(core.shape {
                             width = DOCK.dot,
                             height = DOCK.dot,
@@ -169,14 +231,21 @@ function M.dock(id, opts)
             kids[#kids + 1] = item.label and tooltip("dock_" .. id .. "_" .. i, { label = item.label, child = node, window = opts.window }) or node
         end
     end
-    return row(material.glass("dock", {
+    local shelf = row(material.glass("dock", {
+        width = swell and swell:map(function(f) return rest_width + f.total end) or nil,
         height = DOCK.height,
         radius = DOCK.radius,
         padding = { left = DOCK.pad, right = DOCK.pad, top = (DOCK.height - DOCK.icon) / 2 },
         spacing = DOCK.gap,
         align_v = "start",
+        translate = swell and swell:map(function(f) return { x = -f.before } end),
+        animate = swell and { width = theme.motion.snappy, translate = theme.motion.snappy },
         children = kids,
     }))
+    if not swell then
+        return shelf
+    end
+    return rect { width = rest_width, height = DOCK.height, pointer = at_pointer, children = { shelf } }
 end
 
 return M

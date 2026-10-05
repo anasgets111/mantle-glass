@@ -1,8 +1,11 @@
 -- Table and outline: a header row with sortable, resizable columns over a scrolling list of rows.
 -- Built on the engine's `list` node (rows built once, header pinned). Selection is an inset
--- rounded accent fill, grey while the window is inactive.
+-- rounded accent fill, grey while the window is inactive. Columns wider than the table scroll
+-- sideways with the header; the overlay scrollers show while it scrolls.
 local theme = require("glass.theme")
 local core = require("glass.core")
+local scroller = require("glass.views.scroll_view")
+local knob = scroller.knob
 
 local c, FADE = theme.c, theme.motion.fade
 
@@ -11,7 +14,9 @@ local c, FADE = theme.c, theme.motion.fade
 local ROW = { height = 24, radius = 6, inset = 4, pad = 10, gap = 8, max_height = 320, header = 28 }
 local OUTLINE = { disc = 16, indent = 12, glyph = 11 }
 local RESIZE = { grip = 7, min = 40, line = 14 }
+local FILL_MIN = 120 -- not in the kit: what a "fill" column asks for before the table scrolls sideways
 local TIMING = { double = 400, typeahead = 1000 }
+local WHEEL = 39 -- px of one wheel notch
 local NONE = {}
 
 local M = {}
@@ -109,7 +114,8 @@ local function build(id, opts, tree)
     local sort = opts.sort or state(pre .. "_sort", { ascending = true })
     local open = opts.expanded or state(pre .. "_open", {})
     local anchor, cursor = state(pre .. "_anchor", ""), state(pre .. "_cursor", "")
-    local offset = scroll(pre)
+    local offset, view = scroll(pre), geometry(pre .. "_view")
+    local across, port = scroll(pre .. "_x"), geometry(pre .. "_port")
     local items = type(opts.items) == "userdata" and opts.items or theme.dark:map(function() return opts.items end)
     local rows = computed({ items, sort, open }, function(all, s, o)
         return flatten(all, s, tree and o or NONE, tree, key, cols)
@@ -120,6 +126,16 @@ local function build(id, opts, tree)
         widths[i] = state(pre .. "_w_" .. col.key, col.width or "fill")
         geoms[i] = geometry(pre .. "_g_" .. col.key)
     end
+
+    -- The columns' width with the row padding; "fill" columns count FILL_MIN.
+    local need = computed(widths, function(...)
+        local sum = 2 * (ROW.inset + ROW.pad)
+        for _, w in ipairs({ ... }) do
+            sum = sum + (type(w) == "number" and w or FILL_MIN)
+        end
+        return sum
+    end)
+    local inner = computed({ need, port }, function(n, p) return n > p.width and n or "fill" end)
 
     local function index_of(k)
         for i, e in ipairs(rows:get()) do
@@ -244,6 +260,8 @@ local function build(id, opts, tree)
             end
         elseif n == "space" and multiple and entry and buffer == "" then
             pick(entry.key, { ctrl = true })
+        elseif not tree and (n == "Left" or n == "Right") then
+            across:scroll_by(n == "Left" and -WHEEL or WHEEL)
         elseif tree and n == "Right" and entry then
             if entry.kids and not open:get()[entry.key] then
                 toggle(entry.key)
@@ -376,6 +394,35 @@ local function build(id, opts, tree)
         })
     end
 
+    local body = column {
+        width = inner,
+        children = {
+            row {
+                width = "fill",
+                height = ROW.header,
+                padding = { left = ROW.inset + ROW.pad, right = ROW.inset + ROW.pad },
+                on_wheel = function(_, steps, mods)
+                    if mods.shift then
+                        across:scroll_by(-steps * WHEEL)
+                    end
+                end,
+                children = header_cells,
+            },
+            rect { width = "fill", height = 1, background = c.separator },
+            list {
+                width = "fill",
+                max_height = opts.max_height or ROW.max_height,
+                padding = { left = ROW.inset, right = ROW.inset },
+                scroll = offset,
+                animate = { scroll = scroller.ease(pre) },
+                geometry = view,
+                source = rows,
+                key = function(entry) return entry.key end,
+                itemfn = body_row,
+            },
+        },
+    }
+
     local props = core.shape {
         width = "fill",
         radius = 8,
@@ -385,31 +432,24 @@ local function build(id, opts, tree)
         accessible_name = opts.name or id,
         on_key = on_key,
         children = {
-            row {
+            row { width = "fill", geometry = port, scroll = across, animate = { scroll = scroller.ease(pre .. "_x") }, children = { body } },
+            rect {
                 width = "fill",
-                height = ROW.header,
-                padding = { left = ROW.inset + ROW.pad, right = ROW.inset + ROW.pad },
-                children = header_cells,
+                height = "fill",
+                margin = { top = ROW.header + 1 },
+                hittable = false,
+                children = { knob(pre, offset, view, rows:map(function(all) return #all * ROW.height end)) },
             },
-            rect { width = "fill", height = 1, background = c.separator },
-            list {
-                width = "fill",
-                max_height = opts.max_height or ROW.max_height,
-                padding = { left = ROW.inset, right = ROW.inset },
-                scroll = offset,
-                source = rows,
-                key = function(entry) return entry.key end,
-                itemfn = body_row,
-            },
+            knob(pre .. "_x", across, port, need, true),
         },
     }
     core.focusable(pre, props)
-    return column(props)
+    return rect(props)
 end
 
 -- Table: sortable, resizable columns; click selects, double-click or Return activates.
 -- Keys: Up/Down (Shift extends), Home/End, Page Up/Down, Return, Ctrl+A, Space (toggle) and
--- type-to-select on the first column.
+-- type-to-select on the first column; Left and Right (Shift+wheel over the header) scroll sideways.
 ---@param id string
 ---@param opts glass.TableOpts
 ---@return Node

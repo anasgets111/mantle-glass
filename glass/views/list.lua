@@ -1,7 +1,9 @@
 -- List: a scrolling inset list. Selection is an inset rounded accent fill, rows may alternate.
--- Built on the engine's `list` node, which builds each row once.
+-- Built on the engine's `list` node, which builds each row once; the overlay scroller shows while it scrolls.
 local theme = require("glass.theme")
 local core = require("glass.core")
+local scroller = require("glass.views.scroll_view")
+local knob = scroller.knob
 
 local FADE = theme.motion.fade
 
@@ -12,11 +14,12 @@ local M = {}
 
 -- List: selection is an accent fill. `row` gets boolean signals: `emphasized` while the row has
 -- the accent fill, so its content can switch to `on_accent`; `selected` stays true while the window
--- is inactive and the fill is grey.
+-- is inactive and the fill is grey. Without `row`, an item is a string or `{ label, icon? }` and the
+-- row draws it, switching its ink on the accent.
 ---@class glass.ListOpts
 ---@field items any[]|Signal<any[]>
----@field row fun(item: any, emphasized: Signal<boolean>, selected: Signal<boolean>): Node
----@field key? fun(item: any): string Unique per item; default `tostring`.
+---@field row? fun(item: any, emphasized: Signal<boolean>, selected: Signal<boolean>): Node
+---@field key? fun(item: any): string Unique per item; default the item's `label`, else `tostring`.
 ---@field value? StateSignal<string> The selected key.
 ---@field alternating? boolean Tint every other row.
 ---@field max_height? number Default 320; longer lists scroll.
@@ -24,13 +27,27 @@ local M = {}
 ---@field window? string
 ---@field [string] "no such property"
 
+local function label_of(item)
+    return type(item) == "table" and item.label or tostring(item)
+end
+
+local function default_row(item, emphasized)
+    local kids = {}
+    if type(item) == "table" and item.icon then
+        kids[1] = core.icon(item.icon, theme.pick(emphasized, "on_accent", "accent"), 13, {})
+    end
+    kids[#kids + 1] = core.text(label_of(item), theme.pick(emphasized, "on_accent", "label"), "body", { width = "fill", elide = "end" })
+    return row { width = "fill", spacing = 8, align_v = "center", children = kids }
+end
+
 ---@param id string
 ---@param opts glass.ListOpts
 ---@return Node
 function M.list(id, opts)
     opts = opts or {}
     local active = core.active(opts.window)
-    local key = opts.key or tostring
+    local key = opts.key or label_of
+    local draw = opts.row or default_row
     ---@type StateSignal<string>
     local value = opts.value or state("glass_list_" .. id, "")
     local items = type(opts.items) == "userdata" and opts.items or theme.dark:map(function() return opts.items end)
@@ -41,11 +58,14 @@ function M.list(id, opts)
         end
         return out
     end)
-    return list {
+    local offset, view = scroll("glass_list_" .. id), geometry("glass_list_" .. id)
+    local list_node = list {
         width = "fill",
         max_height = opts.max_height or ROW.max_height,
         padding = { left = ROW.inset, right = ROW.inset },
-        scroll = scroll("glass_list_" .. id),
+        scroll = offset,
+        animate = { scroll = scroller.ease("list_" .. id) },
+        geometry = view,
         source = indexed,
         key = function(entry) return key(entry.item) end,
         itemfn = function(entry)
@@ -59,7 +79,7 @@ function M.list(id, opts)
                 padding = { left = ROW.pad, right = ROW.pad },
                 align_v = "center",
                 animate = { background = FADE },
-                children = { opts.row(entry.item, emphasized, selected) },
+                children = { draw(entry.item, emphasized, selected) },
                 on_click = function()
                     value:set(k)
                     if opts.on_select then
@@ -74,6 +94,10 @@ function M.list(id, opts)
             end)
             return row(core.shape(props))
         end,
+    }
+    return rect {
+        width = "fill",
+        children = { list_node, knob("list_" .. id, offset, view, indexed:map(function(all) return #all * ROW.height end)) },
     }
 end
 

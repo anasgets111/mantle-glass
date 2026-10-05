@@ -33,6 +33,7 @@ local PATH = {
     { label = "Documents", icon = "folder" },
     { label = "Report.pdf", icon = "file" },
 }
+local trail = state("demo_pick_trail", PATH)
 
 local function vslider(id, opts)
     opts.height, opts.vertical = 140, true
@@ -58,9 +59,25 @@ local tokens_col = column_of({
         glass.text(tokens:map(function(t) return table.concat(t or {}, ", ") end), c.secondary_label, "body"),
         glass.token_field("tok_small", { size = "small", width = 320, value = state("demo_pick_tokens_s", { "One", "Two" }) }),
     } }),
-    section.section("Path control", "A click on a segment selects it.", column { spacing = 12, children = {
-        glass.path_control("path", { segments = PATH, on_select = function(i) picked:set(PATH[i].label) end }),
-        glass.path_control("path_pop", { segments = PATH, style = "popup", on_select = function(i) picked:set(PATH[i].label) end }),
+    section.section("Path control", "A click on a segment goes up to it; Open adds a folder. The path is a signal.", column { spacing = 12, children = {
+        glass.path_control("path", { segments = trail, on_select = function(i)
+            local list = trail:get() or {}
+            picked:set(list[i].label)
+            trail:set({ table.unpack(list, 1, i) })
+        end }),
+        glass.path_control("path_pop", { segments = trail, style = "popup", on_select = function(i)
+            local list = trail:get() or {}
+            picked:set(list[i].label)
+            trail:set({ table.unpack(list, 1, i) })
+        end }),
+        line({
+            glass.button("path_open", { label = "Open", icon = "folder-plus", on_click = function()
+                local list = { table.unpack(trail:get() or {}) }
+                list[#list + 1] = { label = "Folder " .. #list, icon = "folder" }
+                trail:set(list)
+            end }),
+            glass.button("path_reset", { label = "Reset", on_click = function() trail:set(PATH) end }),
+        }),
         glass.text(picked:map(function(p) return "selected: " .. (p or "") end), c.secondary_label, "body"),
     } }),
     section.section("Image well", "A click stands in for a picker: it swaps the picture.", line({

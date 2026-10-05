@@ -17,9 +17,9 @@ local M = {}
 ---@field icon? string Lucide name.
 ---@field [string] "no such property"
 
--- Path control. Segments are fixed at build; rebuild the control to change them.
+-- Path control. `segments` may be a signal of a list; the control follows it.
 ---@class glass.PathControlOpts
----@field segments glass.PathSegment[] Root first.
+---@field segments glass.PathSegment[]|Signal<glass.PathSegment[]> Root first.
 ---@field style? "standard"|"popup" Default "standard".
 ---@field size? glass.Size
 ---@field on_select? fun(index: integer) The segment clicked or picked, 1 the root.
@@ -34,7 +34,7 @@ local M = {}
 function M.path_control(id, opts)
     local size = opts.size or "regular"
     local g = theme.SIZES[size]
-    local list = opts.segments
+    local segments = buttons.signal(opts.segments)
     local function select(i)
         if opts.on_select then
             opts.on_select(i)
@@ -51,7 +51,7 @@ function M.path_control(id, opts)
 
     if opts.style == "popup" then
         local anchor = geometry("glass_anchor_" .. id)
-        local last = list[#list]
+        local last = segments:map(function(list) return { list[#list] or { label = "" } } end)
         return buttons.control(id, {
             size = size,
             kind = "plain",
@@ -62,7 +62,7 @@ function M.path_control(id, opts)
             name = id,
             props = { geometry = anchor, spacing = 4 },
             on_click = function()
-                local items = {}
+                local list, items = segments:get() or {}, {}
                 for i = #list, 1, -1 do
                     items[#items + 1] = { label = list[i].label, icon = list[i].icon, value = i }
                 end
@@ -75,30 +75,47 @@ function M.path_control(id, opts)
                 })
             end,
         }, function(color)
-            local kids = content(last, color)
-            kids[#kids + 1] = rect { width = g.height, height = g.height, children = { core.icon("chevrons-up-down", color, g.icon, { align_h = "center" }) } }
-            return kids
+            return {
+                list {
+                    direction = "horizontal",
+                    source = last,
+                    itemfn = function(seg) return row { spacing = 4, children = content(seg, color) } end,
+                },
+                rect { width = g.height, height = g.height, children = { core.icon("chevrons-up-down", color, g.icon, { align_h = "center" }) } },
+            }
         end)
     end
 
-    local kids = {}
-    for i, seg in ipairs(list) do
-        if i > 1 then
-            kids[#kids + 1] = core.icon("chevron-right", c.tertiary_label, CHEVRON)
-        end
-        kids[#kids + 1] = buttons.control(id .. "_" .. i, {
-            size = size,
-            kind = "borderless",
-            on_glass = opts.on_glass,
-            disabled = opts.disabled,
-            window = opts.window,
-            padding = { left = 6, right = 6 },
-            name = seg.label,
-            on_click = function() select(i) end,
-            props = { spacing = 4 },
-        }, function(color) return content(seg, color) end)
-    end
-    return row { spacing = 2, align_v = "center", children = kids }
+    return list {
+        direction = "horizontal",
+        spacing = 2,
+        align_v = "center",
+        source = segments:map(function(all)
+            local out = {}
+            for i, seg in ipairs(all or {}) do
+                out[i] = { seg = seg, i = i }
+            end
+            return out
+        end),
+        itemfn = function(item)
+            local kids = {}
+            if item.i > 1 then
+                kids[1] = core.icon("chevron-right", c.tertiary_label, CHEVRON)
+            end
+            kids[#kids + 1] = buttons.control(id .. "_" .. item.i, {
+                size = size,
+                kind = "borderless",
+                on_glass = opts.on_glass,
+                disabled = opts.disabled,
+                window = opts.window,
+                padding = { left = 6, right = 6 },
+                name = item.seg.label,
+                on_click = function() select(item.i) end,
+                props = { spacing = 4 },
+            }, function(color) return content(item.seg, color) end)
+            return row { spacing = 2, align_v = "center", children = kids }
+        end,
+    }
 end
 
 return M

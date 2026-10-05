@@ -97,6 +97,9 @@ function M.token_field(id, opts)
     end
 
     local function on_key(k)
+        if k.name == "Tab" and menu.pick_highlighted(menu_id) then
+            return true
+        end
         if k.name == "BackSpace" or k.name == "Delete" then
             local sel, list = picked:get(), value:get() or {}
             if sel > 0 and sel <= #list then
@@ -141,6 +144,9 @@ function M.token_field(id, opts)
             suggest(t)
         end,
         on_submit = function(t)
+            if menu.pick_highlighted(menu_id) then
+                return
+            end
             add(t)
             draft:set("")
             if menu.is_menu_open(menu_id):get() then

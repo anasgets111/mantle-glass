@@ -25,6 +25,8 @@ local MENU = {
     width = 244,
     min_width = 160, -- not in the kit: floor for a menu as wide as its anchor
     below = 4, -- not in the kit: anchor to menu
+    edge = 4, -- not in the kit: the least room left between a menu and the window's edge
+    sub_width = 120,
 }
 
 -- not in the kit: without the plus-lighter/darker blend a tertiary vibrant grey vanishes on the
@@ -37,6 +39,12 @@ local subsel = state("glass_menu_subsel", 0)
 local deep = state("glass_menu_deep", false)
 local owner = state("glass_menu_owner", "")
 local shown = overlay.is_open("glass_menu")
+local box, sub_box = geometry("glass_menu_box"), geometry("glass_menu_sub_box")
+
+-- `x` moved so the span `size` stays inside [lo, hi] with the edge margin; it keeps `lo` if too big.
+local function clamp(x, size, lo, hi)
+    return math.max(lo + MENU.edge, math.min(x, hi - MENU.edge - size))
+end
 
 ---@type table
 local spec = {}
@@ -53,6 +61,18 @@ local function pick(item)
     if spec.on_pick then
         spec.on_pick(item)
     end
+end
+
+-- The highlighted row, in the submenu when it holds the keyboard; nil while no menu is open.
+local function current()
+    local items = spec.items
+    if not items or not shown:get() then
+        return nil
+    end
+    if deep:get() then
+        return items[sub:get()].submenu[subsel:get()]
+    end
+    return items[sel:get()]
 end
 
 local never = theme.dark:map(function() return false end)
@@ -180,17 +200,28 @@ overlay.layer("glass_menu", function()
     local width = spec.width or MENU.width
     local function w_of(r) return math.max(r and r.width or 0, MENU.min_width) end
     local panel_width = width == "anchor" and anchor:map(w_of) or width
+    local bounds = overlay.bounds(spec.window or core.window)
     local main = panel(items, 1, {
         width = panel_width,
-        margin = anchor:map(function(r)
+        geometry = box,
+        margin = computed({ anchor, bounds, box }, function(r, b, t)
             if not r then
                 return {}
             end
-            local left = r.x
+            local w, h = t and t.width or 0, t and t.height or 0
+            -- A context menu touches the pointer, above it or below.
+            local gap = spec.at and 0 or MENU.below
+            local left, top = r.x, r.y + r.height + gap
             if spec.align == "end" then
                 left = r.x + r.width - (width == "anchor" and w_of(r) or width)
             end
-            return { left = left, top = r.y + r.height + MENU.below }
+            if b then
+                if top + h > b.y + b.height - MENU.edge and r.y - gap - h >= b.y + MENU.edge then
+                    top = r.y - gap - h
+                end
+                left, top = clamp(left, w, b.x, b.x + b.width), clamp(top, h, b.y, b.y + b.height)
+            end
+            return { left = left, top = top }
         end),
     }, function(i)
         return computed({ sel, sub, deep }, function(s, p, d) return s == i and not (p == i and d) end)
@@ -206,9 +237,19 @@ overlay.layer("glass_menu", function()
         if item.submenu then
             local at = geometry("glass_menu_row_" .. i)
             subs[i] = panel(item.submenu, 2, {
-                width = 120,
-                margin = at:map(function(r)
-                    return { left = r.x + r.width + MENU.pad.right - 2, top = r.y - MENU.pad.top }
+                width = MENU.sub_width,
+                geometry = sub_box,
+                margin = computed({ at, bounds, sub_box }, function(r, b, t)
+                    local h = t and t.height or 0
+                    local left, top = r.x + r.width + MENU.pad.right - 2, r.y - MENU.pad.top
+                    if b then
+                        if left + MENU.sub_width > b.x + b.width - MENU.edge then
+                            left = r.x - MENU.pad.left + 2 - MENU.sub_width
+                        end
+                        left = clamp(left, MENU.sub_width, b.x, b.x + b.width)
+                        top = clamp(top, h, b.y, b.y + b.height)
+                    end
+                    return { left = left, top = top }
                 end),
             }, function(j) return computed({ subsel, deep }, function(s, d) return d and s == j end) end, nil,
             function(j)
@@ -243,15 +284,7 @@ overlay.layer("glass_menu", function()
             return true
         end
         if key.name == "Return" or key.name == "KP_Enter" or key.name == "space" then
-            local item
-            if deep:get() then
-                item = items[sub:get()].submenu[subsel:get()]
-            else
-                item = items[sel:get()]
-            end
-            if item and selectable(item) and not item.submenu then
-                pick(item)
-            end
+            M.pick_highlighted()
             return true
         end
     end
@@ -315,7 +348,7 @@ end, {
 function M.open_menu(opts)
     spec = opts
     if opts.at then
-        local at = { x = opts.at.x, y = opts.at.y - MENU.below, width = 0, height = 0 }
+        local at = { x = opts.at.x, y = opts.at.y, width = 0, height = 0 }
         spec = core.merge(core.merge({}, opts), { anchor = never:map(function() return at end) })
     end
     sel:set(0)
@@ -354,6 +387,24 @@ function M.context_menu(id, opts)
         end,
         children = { opts.child },
     }
+end
+
+-- The row the open menu highlights, or nil: for an opener whose own keys steer the menu.
+---@return glass.MenuItem?
+function M.highlighted()
+    return current()
+end
+
+-- Picks the highlighted row as Return does; false when none is, or the open menu is not `id`'s.
+---@param id? string
+---@return boolean
+function M.pick_highlighted(id)
+    local item = current()
+    if (id and owner:get() ~= id) or not item or not selectable(item) or item.submenu then
+        return false
+    end
+    pick(item)
+    return true
 end
 
 -- native menu glyphs and the modifier each one means here: ⌘ is Ctrl, as Super belongs to the

@@ -35,7 +35,7 @@ local VIEWS = {}
 for name, node in pairs(BUILT) do
     VIEWS[name] = glass.scroll_view(name, {
         child = node,
-        props = { id = name, opacity = 1, animate = { scroll = theme.motion.smooth, opacity = { duration = 200, from = 0 } } },
+        props = { id = name, opacity = 1, animate = { opacity = { duration = 200, from = 0 } } },
     })
 end
 local body = page:map(function(name) return { VIEWS[name] } end)

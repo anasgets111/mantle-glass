@@ -68,10 +68,10 @@ local function on(layer, host)
 end
 
 -- The `geometry` handle of host `id`'s root, for a layer to keep inside it.
----@param host string
+---@param host? string Default the first window root built.
 ---@return Signal<table>
 function M.bounds(host)
-    return geometry("glass_root_" .. host)
+    return geometry("glass_root_" .. (host or first_root))
 end
 
 -- Tooltip: one at a time, over everything. `build(anchor, bounds)` gets the anchor's and the host's

@@ -131,6 +131,30 @@ local popovers = rect {
     } } },
 }
 
+local function edge_row(align, children) return row { width = "fill", spacing = 16, align_h = align, children = children } end
+local edge = column { width = "fill", spacing = 280, children = {
+    edge_row("end", {
+        opener("edge_pop", "Popover to the right", function(anchor)
+            glass.open_popover {
+                anchor = anchor,
+                edge = "right",
+                width = 220,
+                content = column { spacing = 8, children = {
+                    glass.text("Flipped", c.label, "headline"),
+                    glass.text("No room on the right, so it opens on the left.", c.secondary_label, "body", { wrap = "word", width = "fill" }),
+                } },
+            }
+        end),
+        opener("edge_menu", "Menu at the edge", open_file_menu),
+    }),
+    edge_row("start", {
+        opener("edge_menu_low", "Menu at the bottom", open_file_menu),
+        opener("edge_pop_low", "Popover below", function(anchor)
+            glass.open_popover { anchor = anchor, width = 220, content = glass.text("No room below, so it opens above.", c.label, "body", { wrap = "word", width = "fill" }) }
+        end),
+    }),
+} }
+
 local alerts = line {
     opener("alert_two", "Alert", function()
         glass.open_alert {
@@ -203,4 +227,5 @@ return section.page {
     section.section("Sheet", "A modal panel with a small form.", sheets),
     section.section("Tooltips", "Rest the pointer on a control.", tooltips),
     section.section("Notifications", "A banner at the top right.", notifications),
+    section.section("Near the edge", "A menu, submenu or popover that would run past the window flips or slides to stay inside it. The ones on the left sit at the bottom.", edge, { wide = true }),
 }

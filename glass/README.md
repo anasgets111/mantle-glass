@@ -131,6 +131,8 @@ A press on empty chrome moves the window, right press opens the window menu, and
 | `inspector`, `inspector_shown`, `inspector_width` | A node for a trailing glass pane (not in the kit: mirrors the sidebar), a state boolean, the opening width (256) |
 | edge drag | The sidebar's edge drags between 180 and 400, the inspector's between 200 and 400 (not in the kit: as native apps); widths are named state per window `id` |
 | `kind = "utility"`, `tabs`, `tab` | A 15 px utility panel: 10 px lights on a 17 px pitch, a 24 px titlebar, or with `tabs` (`{ icon, label, value }`) a 56 px toolbar with 44x28 tabs, the selected on small glass; `tab` is the selected value state |
+| `min_content` | Default 500 (not in the kit). When the window leaves less than this beside the sidebar, the sidebar hides as if toggled and returns when widened; `sidebar_shown` stays the user's own choice, and while narrow the toggle opens the pane on its own. 0 turns it off |
+| `tabs`, `tab`, `on_new_tab`, `on_close_tab` | On any other window: a native window tab bar (34 px, not in the kit) under the toolbar. `tabs` is `{ name, title }[]` or a signal of one; equal-width tabs on a fill strip, the selected raised on small glass, a close button on the hovered tab, a + after the strip. `tab` is the selected name (state; default the first), `on_close_tab(name)` and `on_new_tab()` change the list: the app edits `tabs` and picks the next `tab`, and switches its content on `tab` |
 
 | Function | opts |
 | :--- | :--- |
@@ -148,7 +150,7 @@ Desktop chrome for a shell: put them in a `panel` and return `glass.overlay.popu
 | Function | opts |
 | :--- | :--- |
 | `menu_bar(id, opts)` | `menus` (`{ title?, icon?, bold?, items }`; a click opens one, moving along the bar switches while one is open), `trailing` (status nodes), `ink` (title colour; default white), `window` |
-| `dock(id, opts)` | `items` (`{ label?, icon?, color? (a `theme.SYSTEM` name), image?, running?, on_click? }` or `{ separator = true }`; labels show as tooltips), `window` |
+| `dock(id, opts)` | `items` (`{ label?, icon?, color? (a `theme.SYSTEM` name), image?, running?, bouncing?, on_click? }` or `{ separator = true }`; labels show as tooltips; `bouncing`, boolean or signal, hops the icon while true), `magnify` (icons near the pointer swell to 1.6x, neighbours less, and the shelf grows; the icon under the pointer stays put), `window` |
 
 ### Controls (`controls/`)
 
@@ -252,7 +254,7 @@ Text field whose entries (Return or comma) become accent-tinted capsule tokens t
 
 | Function | opts |
 | :--- | :--- |
-| `token_field(id, opts)` | `value` (state of a string list; default empty), `suggestions` (strings shown in a menu while typing, matched on their start), `placeholder` (while empty), `size`, `width` (240), `disabled`, `window`, `name`, `on_change(tokens)` |
+| `token_field(id, opts)` | `value` (state of a string list; default empty), `suggestions` (strings shown in a menu while typing, matched on their start; Up/Down highlight one, Return or Tab picks it), `placeholder` (while empty), `size`, `width` (240), `disabled`, `window`, `name`, `on_change(tokens)` |
 
 #### inputs/date_picker.lua (`date_picker`, `calendar`)
 
@@ -260,14 +262,14 @@ A date is `{ year, month, day }`, plus `hour`, `minute` with `time`. Dates go th
 
 | Function | opts |
 | :--- | :--- |
-| `date_picker(id, opts)` | `value` (state of a date; default now), `time` (adds 24 h hour and minute), `style` (`"textual"` default: fields and a stepper, Up/Down step the selected part; `"popover"`: a compact field that opens the calendar), `size`, `disabled`, `window`, `on_change(date)` |
+| `date_picker(id, opts)` | `value` (state of a date; default now), `time` (adds 24 h hour and minute), `style` (`"textual"` default: fields and a stepper, Up/Down step the selected part, digits fill it and move on once it is full or the next digit could not fit, Backspace empties it; `"popover"`: a compact field that opens the calendar), `size`, `disabled`, `window`, `on_change(date)` |
 | `calendar(id, opts)` | `value` (state of a date), `view` (state `{ year, month }` shown), `disabled`, `window`, `on_change(date)`. Month grid with previous, next and Today; selected day accent, today outlined; arrows move the day, Page Up/Down the month |
 
 #### inputs/path_control.lua (`path_control`)
 
 | Function | opts |
 | :--- | :--- |
-| `path_control(id, opts)` | `segments` (required; `{ label, icon? }`, root first, fixed at build), `style` (`"standard"` breadcrumb with chevrons, `"popup"` shows the last and lists the path in a menu), `size`, `disabled`, `on_glass`, `window`, `on_select(index)` |
+| `path_control(id, opts)` | `segments` (required; `{ label, icon? }`, root first; a list or a signal of one), `style` (`"standard"` breadcrumb with chevrons, `"popup"` shows the last and lists the path in a menu), `size`, `disabled`, `on_glass`, `window`, `on_select(index)` |
 
 ### Views (`views/`)
 
@@ -303,15 +305,15 @@ Content for `app_window`'s `sidebar`: scrolling rows, folders that open in place
 
 #### views/list.lua (`list`)
 
-Scrolling inset list on the engine's `list` node; selection is an accent fill.
+Scrolling inset list on the engine's `list` node; selection is an accent fill. The overlay scroller knob shows while it scrolls.
 
 | Function | opts |
 | :--- | :--- |
-| `list(id, opts)` | `items` (required; array or signal of arrays), `row(item, emphasized, selected)` (required; returns a node; boolean signals: `emphasized` while the row has the accent fill, so content can switch to `on_accent`; `selected` stays true while the window is inactive and the fill is grey), `key(item)` (unique string; default `tostring`), `value` (state of the selected key), `alternating` (tint every other row), `max_height` (320; longer lists scroll), `on_select(item)`, `window` |
+| `list(id, opts)` | `items` (required; array or signal of arrays), `row(item, emphasized, selected)` (returns a node; default draws a string or `{ label, icon? }` item; boolean signals: `emphasized` while the row has the accent fill, so content can switch to `on_accent`; `selected` stays true while the window is inactive and the fill is grey), `key(item)` (unique string; default the item's `label`, else `tostring`), `value` (state of the selected key), `alternating` (tint every other row), `max_height` (320; longer lists scroll), `on_select(item)`, `window` |
 
 #### views/table.lua (`table`, `outline`)
 
-Header over a scrolling list of rows, on the engine's `list` node. Selection is an accent fill, grey while the window is inactive. Keys: Up/Down (Shift extends), Home/End, Page Up/Down, Return, Ctrl+A, Space toggles, type-to-select on the first column; double-click or Return calls `on_activate`. Drag a header divider to resize.
+Header over a scrolling list of rows, on the engine's `list` node. Selection is an accent fill, grey while the window is inactive. Keys: Up/Down (Shift extends), Home/End, Page Up/Down, Return, Ctrl+A, Space toggles, type-to-select on the first column; double-click or Return calls `on_activate`. Drag a header divider to resize. Columns wider than the table (`"fill"` counts 120 px) scroll sideways, header and rows together, with a horizontal knob; Left and Right (table) or Shift+wheel over the header scroll it. Both overlay knobs show while scrolling.
 
 | Function | opts |
 | :--- | :--- |
@@ -326,11 +328,14 @@ Header over a scrolling list of rows, on the engine's `list` node. Selection is 
 
 #### views/scroll_view.lua (`scroll_view`)
 
-A scrolling area that fills its parent, with the native overlay scroller: a 6 px knob at the trailing edge, shown while scrolling.
+A scrolling area that fills its parent, scrolling smoothly as native apps do, with the overlay scroller: a 6 px knob at the trailing edge, shown while scrolling or while the pointer is in its 12 px strip, where it widens over a faint track; the knob drags and a track click pages. `table` and `list` share it.
 
 | Function | opts |
 | :--- | :--- |
 | `scroll_view(id, opts)` | `child` (the content), `scroll` (a `scroll(name)` signal; default its own), `props` (extra fields for the scrolling column: `padding`, `id`, ...) |
+| `knob(name, scroll, view, content, horizontal?)` | The scroller node for your own scroller: a unique `name`, the `scroll` signal, the viewport's `geometry` signal and a signal of the content's length on the axis. Put it in a stacking parent beside the viewport; build it once, not in a map |
+| `ease(name)` | The scroll ease for your own viewport (`animate = { scroll = ease(name) }`): native smooth scrolling, instant while knob `name` is held. `scroll_view`, `list` and `table` use it |
+| `dragging(name)` | State: true while knob `name` is held |
 
 ### Overlays (`overlays/`)
 
@@ -348,11 +353,13 @@ return { bar, glass.overlay.popup("bar") }
 
 | Function | opts |
 | :--- | :--- |
-| `open_menu(opts)` | `anchor` (a `geometry(name)` signal; opens under it), `items` (`{ label, icon?, shortcut?, checked?, disabled?, submenu? (items), on_click? }`, `{ separator = true }` or `{ header = "..." }`), `on_pick(item)`, `width` (px or `"anchor"`; default 244), `align` (`"start"`, `"end"` to line up with the anchor's trailing edge), `id` (names the opener for `is_menu_open`), `window`, or `at` (`{ x, y }` in host coordinates) instead of `anchor`. Arrow keys, Enter, Escape work |
+| `open_menu(opts)` | `anchor` (a `geometry(name)` signal; opens under it), `items` (`{ label, icon?, shortcut?, checked?, disabled?, submenu? (items), on_click? }`, `{ separator = true }` or `{ header = "..." }`), `on_pick(item)`, `width` (px or `"anchor"`; default 244), `align` (`"start"`, `"end"` to line up with the anchor's trailing edge), `id` (names the opener for `is_menu_open`), `window`, or `at` (`{ x, y }` in host coordinates) instead of `anchor`. Arrow keys, Enter, Escape work. A menu that would pass the window's edge flips above its anchor (or slides up) and slides left; a submenu opens to the left when the right has no room |
+| `highlighted()` | The row the open menu highlights, or nil: for an opener whose own keys steer the menu |
+| `pick_highlighted(id?)` | Picks the highlighted row as Enter does; false when none is, or the open menu is not `id`'s |
 | `is_menu_open(id)` | Signal: true while the menu opened with `id` shows |
 | `context_menu(id, opts)` | Wraps `child`; a right click opens `items` (a list, or a function building one per opening) at the pointer. `on_pick`, `window` |
 | `bind_shortcuts(items, window?)` | Makes `items`' `shortcut`s fire their `on_click` while the window has the keyboard and nothing is open. ⌘ and ⌃ are Ctrl, ⌥ Alt, ⇧ Shift (`menu.MODIFIERS`); ⏎ ⌫ ⎋ ⇥ and arrows name keys |
-| `open_popover(opts)` | `anchor` (a `geometry` signal; required), `content` (node or function returning one), `edge` (`"bottom"` default, `"top"`, `"left"`, `"right"`: side of the anchor), `width` (230), `window`. Closes on outside click and Escape |
+| `open_popover(opts)` | `anchor` (a `geometry` signal; required), `content` (node or function returning one), `edge` (`"bottom"` default, `"top"`, `"left"`, `"right"`: side of the anchor; it flips to the opposite side when only that has room in the window, and slides, the arrow keeping to the anchor, to stay inside it), `width` (230), `window`. Closes on outside click and Escape |
 | `open_alert(opts)` | `title` (required), `message`, `icon` (Lucide), `buttons` (`{ label, kind?, on_click? }`; `kind` `"default"` accent, `"destructive"` red, else plain; each closes the alert then runs `on_click`; Escape runs the first plain one), `suppression` (`{ label?, value? }`; "do not show again" checkbox, `value` a state), `window` |
 | `open_sheet(opts)` | `content` (node, or `function(close)` returning one), `width` (390), `window`. Close with `close` or `overlay.close("glass_sheet")` |
 | `open_notification(opts)` | `title`, `body`, `icon` (default `"bell"`), `app` (right caption, default `"now"`), `window`. Dismisses after 5 s or on click |
@@ -365,6 +372,6 @@ return { bar, glass.overlay.popup("bar") }
 | `close(id)` | Closes layer `id` (`"glass_menu"`, `"glass_popover"`, `"glass_alert"`, `"glass_sheet"`, `"glass_notify"`) on every host |
 | `close_all()` | Closes every layer and the tooltip |
 | `is_open(id)` | Signal: whether layer `id` is open |
-| `bounds(host)` | The `geometry` signal of host `host`'s root |
+| `bounds(host?)` | The `geometry` signal of host `host`'s root (default the first window built) |
 | `popup(parent)` | The panel surface above |
 | `layer(id, build, handlers?)`, `open(id, data, host)` | Register and show a custom layer; `handlers.escape()`, `handlers.key(key)` |

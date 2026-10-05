@@ -183,6 +183,132 @@ function M.toolbar_navigation(id, opts)
     }))
 end
 
+-- Window tabs, as file managers and browsers draw them: equal-width tabs on a fill strip, the
+-- selected one raised on small glass, a close button on the hovered one and a + after the strip.
+-- not in the kit: the metrics, and that the hover tint is a fill.
+M.TAB_BAR = 34
+local TAB = { strip = 28, pad = 2, radius = 7, gap = 2, close = 16, new = 24, inset = 8 }
+
+---@class glass.TabBarTab
+---@field name string Unique key, the value of `tab`.
+---@field title string
+---@field [string] "no such property"
+
+---@class glass.TabBarOpts
+---@field tabs glass.TabBarTab[]|Signal<glass.TabBarTab[]>
+---@field tab? StateSignal<string> The selected tab's name; default its own, the first.
+---@field on_new_tab? fun()
+---@field on_close_tab? fun(name: string)
+---@field window? string
+---@field active? Signal<boolean>
+---@field [string] "no such property"
+
+-- Build it once: each tab keeps its hover across list changes. The bar shows no tab selected once
+-- `tab` names none, so the app picks the next one when it closes the selected tab.
+---@param id string
+---@param opts glass.TabBarOpts
+---@return Node
+function M.tab_bar(id, opts)
+    local active = opts.active or core.active(opts.window)
+    local tabs = sig(opts.tabs)
+    local tab = opts.tab or state(id .. "_tab", (tabs:get()[1] or {}).name or "")
+    local function item(t)
+        local over = hover(id .. "_h_" .. t.name)
+        local selected = tab:map(function(v) return v == t.name end)
+        local node = {
+            width = "fill",
+            height = "fill",
+            radius = TAB.radius,
+            hover = over,
+            accessible_name = t.title,
+            cursor = "default",
+            on_click = function() tab:set(t.name) end,
+        }
+        core.focusable(id .. "_" .. t.name, node)
+        node.children = {
+            rect(core.shape {
+                width = "fill",
+                height = "fill",
+                radius = TAB.radius,
+                hittable = false,
+                background = c.secondary_fill,
+                opacity = computed({ over, selected }, function(h, on) return h and not on and 1 or 0 end),
+                animate = { opacity = theme.motion.fade },
+            }),
+            rect(material.glass(material.by_activity("small", active), {
+                width = "fill",
+                height = "fill",
+                radius = TAB.radius,
+                hittable = false,
+                opacity = selected:map(function(on) return on and 1 or 0 end),
+                animate = { opacity = theme.motion.fade },
+            })),
+            core.text(t.title, theme.pick(selected, "label", "secondary_label"), "control_small", {
+                align_h = "center",
+                align_v = "center",
+                elide = "end",
+                margin = { left = TAB.close + 12, right = TAB.close + 12 },
+                hittable = false,
+            }),
+            rect(core.shape {
+                width = TAB.close,
+                height = TAB.close,
+                radius = TAB.close / 2,
+                align_v = "center",
+                margin = { left = 6 },
+                accessible_name = "Close " .. t.title,
+                opacity = over:map(function(h) return h and 1 or 0 end),
+                animate = { opacity = theme.motion.fade },
+                on_click = function()
+                    if opts.on_close_tab then
+                        opts.on_close_tab(t.name)
+                    end
+                end,
+                children = { icon("x", c.secondary_label, 10, { align_h = "center" }) },
+            }),
+        }
+        return rect(core.shape(node))
+    end
+    local strip = row {
+        width = "fill",
+        height = TAB.strip,
+        radius = TAB.radius + TAB.pad,
+        padding = TAB.pad,
+        spacing = TAB.gap,
+        background = c.tertiary_fill,
+        children = { list {
+            width = "fill",
+            height = "fill",
+            direction = "horizontal",
+            spacing = TAB.gap,
+            source = tabs,
+            key = function(t) return t.name end,
+            itemfn = item,
+        } },
+    }
+    local plus = {
+        width = TAB.new,
+        height = TAB.new,
+        radius = TAB.new / 2,
+        margin = { top = (TAB.strip - TAB.new) / 2 },
+        accessible_name = "New tab",
+        on_click = opts.on_new_tab,
+        animate = { background = theme.motion.fade },
+    }
+    core.focusable(id .. "_new", plus)
+    local held = core.pressable(id .. "_new", plus)
+    plus.background = computed({ held, theme.scheme }, function(down, p) return down and p.secondary_fill or CLEAR end)
+    plus.children = { icon("plus", c.secondary_label, 14, { align_h = "center" }) }
+    return row {
+        width = "fill",
+        height = M.TAB_BAR,
+        align_v = "start",
+        spacing = 6,
+        padding = { left = TAB.inset, right = TAB.inset },
+        children = { strip, rect(core.shape(plus)) },
+    }
+end
+
 -- The sidebar toggle: 36 px in the expanded and unified toolbars, 24 px in compact.
 ---@class glass.SidebarToggleOpts
 ---@field shown StateSignal<boolean>

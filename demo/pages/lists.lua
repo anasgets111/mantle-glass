@@ -65,22 +65,16 @@ local disclosures = column { spacing = 8, width = "fill", children = {
 } }
 
 local APPS = {
-    { "Mail", "mail" }, { "Calendar", "calendar" }, { "Notes", "notebook-pen" }, { "Photos", "image" },
-    { "Music", "music" }, { "Maps", "map" }, { "Chat", "message-circle" }, { "Weather", "cloud-sun" },
+    { label = "Mail", icon = "mail" }, { label = "Calendar", icon = "calendar" }, { label = "Notes", icon = "notebook-pen" },
+    { label = "Photos", icon = "image" }, { label = "Music", icon = "music" }, { label = "Maps", icon = "map" },
+    { label = "Chat", icon = "message-circle" }, { label = "Weather", icon = "cloud-sun" },
 }
 local picker = column { width = 620, spacing = 8, children = {
     glass.list("apps", {
         items = APPS,
-        key = function(a) return a[1] end,
         value = picked,
         alternating = true,
         max_height = 210,
-        row = function(a, selected)
-            return row { spacing = 8, align_v = "center", children = {
-                glass.icon(a[2], glass.theme.pick(selected, "on_accent", "accent"), 13, {}),
-                glass.text(a[1], glass.theme.pick(selected, "on_accent", "label"), "body"),
-            } }
-        end,
     }),
     glass.text(picked:map(function(v) return "Selected: " .. v end), c.label, "headline"),
 } }
@@ -91,5 +85,5 @@ return section.page {
     }),
     section.section("Group box", "A box around related controls.", box),
     section.section("Disclosure groups", "A chevron and label that reveal content in place.", disclosures),
-    section.section("List", "Selection is an inset accent fill with white text; every other row is tinted.", picker),
+    section.section("List", "Selection is an inset accent fill with white text; every other row is tinted. Scrolling shows the overlay knob.", picker),
 }

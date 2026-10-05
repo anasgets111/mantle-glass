@@ -31,6 +31,8 @@ local PANE = {
     inspector = { default = 256, min = 200, max = 400 },
 }
 local GRAB = 6
+-- not in the kit: the content a window keeps before its sidebar gives way, as native apps do.
+local MIN_CONTENT = 500
 
 -- Window drop shadows: a wide ambient one and a 1 px rim. Dark without
 -- a sidebar uses the tighter one while active; every inactive window uses it at half strength.
@@ -266,7 +268,7 @@ end
 local CHROME_PROPS = {
     subtitle = true, toolbar = true, leading = true, trailing = true, scroll_edge = true, sidebar = true, child = true,
     sidebar_shown = true, inspector = true, inspector_shown = true, inspector_width = true, kind = true, tabs = true,
-    tab = true, preview = true, active = true,
+    tab = true, on_new_tab = true, on_close_tab = true, min_content = true, preview = true, active = true,
 }
 
 -- The chrome fields, shared by `app_window` and the inline `window_frame`.
@@ -284,8 +286,11 @@ local CHROME_PROPS = {
 ---@field inspector? Node The glass pane at the right (not in the kit: mirrors the sidebar).
 ---@field inspector_shown? StateSignal<boolean> Default its own, shown.
 ---@field inspector_width? number Opening width, default 256; its edge drags between 200 and 400.
----@field tabs? { icon: string, label: string, value?: string }[] A utility panel's toolbar with tabs.
----@field tab? StateSignal<string> The selected tab's value (else label); default the first.
+---@field min_content? number Default 500. The sidebar hides while the window leaves its content less than this, and returns when widened; 0 never hides it.
+---@field tabs? { icon: string, label: string, value?: string }[]|glass.TabBarTab[]|Signal<glass.TabBarTab[]> A utility panel: its toolbar tabs `{ icon, label, value }`. Any other window: a native tab bar under the toolbar, `{ name, title }`.
+---@field tab? StateSignal<string> The selected tab: a utility panel's value (else label), a window tab's name; default the first.
+---@field on_new_tab? fun() The + of a window's tab bar.
+---@field on_close_tab? fun(name: string) The close button of a window tab. The app removes the tab and picks the next.
 ---@field child? Node The content, which scrolls under the floating toolbar.
 ---@field on_close? fun()
 ---@field preview? boolean Inline preview: no window behind it, so no drag, menu or focus; looks active unless `active` says otherwise.
@@ -303,18 +308,40 @@ function M.window_frame(props)
     local has_sidebar = props.sidebar ~= nil and not utility
     local has_inspector = props.inspector ~= nil and not utility
     local grab_id = not preview and id or nil
+    local frame_geo = preview and geometry("glass_win_" .. id .. "_frame") or overlay.bounds(id)
     local body
     if utility then
         body = utility_body(props, active, lights)
     else
         local style = CHROME[props.toolbar or "unified"]
         local expanded = style.bar ~= nil
-        local shown = props.sidebar_shown or state("glass_win_" .. id .. "_sidebar", true)
+        local tabbed = props.tabs ~= nil
+        local wanted = props.sidebar_shown or state("glass_win_" .. id .. "_sidebar", true)
+        local sidebar_w = has_sidebar and state("glass_win_" .. id .. "_sidebar_w", PANE.sidebar.default) or nil
+        -- The user's own say while the window is narrow: the pane is away until they open it.
+        local peek = state("glass_win_" .. id .. "_sidebar_peek", false)
+        local narrow = has_sidebar and computed({ frame_geo, sidebar_w }, function(g, w)
+            return g.width > 0 and g.width - w < (props.min_content or MIN_CONTENT)
+        end) or ON:map(function() return false end)
+        local shown = computed({ wanted, narrow, peek }, function(want, tight, open) return tight and open or not tight and want end)
         local lights_end = style.lights[1] + 68 + 12
         local tw = style.toggle[1] + 8
         local size = style.toggle[1] == 24 and "medium" or "xl"
         local function toggle(name)
-            return toolbar.sidebar_toggle("glass_win_" .. id .. "_" .. name, { shown = shown, size = size, active = active })
+            return toolbar.toolbar_button("glass_win_" .. id .. "_" .. name, {
+                icon = "panel-left",
+                label = "Toggle sidebar",
+                size = size,
+                active = active,
+                on_click = function()
+                    if narrow:get() then
+                        peek:set(not peek:get())
+                    else
+                        wanted:set(not wanted:get())
+                        peek:set(false)
+                    end
+                end,
+            })
         end
         -- The first toolbar row's left padding: past the lights and toggle while the sidebar is away.
         local function inset(first, extra)
@@ -362,23 +389,36 @@ function M.window_frame(props)
                 children = items(lead, props.trailing or {}),
             }
         end
-        local sidebar_w = has_sidebar and state("glass_win_" .. id .. "_sidebar_w", PANE.sidebar.default) or nil
         local sidebar_drag = has_sidebar and state("glass_win_" .. id .. "_sidebar_drag", false) or nil
         local inspector_shown = has_inspector and (props.inspector_shown or state("glass_win_" .. id .. "_inspector", true)) or nil
         local inspector_w = has_inspector and state("glass_win_" .. id .. "_inspector_w", props.inspector_width or PANE.inspector.default) or nil
         local inspector_drag = has_inspector and state("glass_win_" .. id .. "_inspector_drag", false) or nil
         -- The content runs under the toolbar; the scroll edge keeps the bar legible over it.
+        local top = style.height + (tabbed and toolbar.TAB_BAR or 0)
         local content = rect {
             width = "fill",
             height = "fill",
             background = c.window_background,
             children = {
-                rect { width = "fill", height = "fill", padding = { top = style.height }, children = { props.child } },
-                scroll_edge(props.scroll_edge, style.height + 1),
+                rect { width = "fill", height = "fill", padding = { top = top }, children = { props.child } },
+                scroll_edge(props.scroll_edge, top + 1),
                 rect { width = "fill", height = style.height, children = { drag_area(grab_id) } },
                 bar,
             },
         }
+        if tabbed then
+    table.insert(content.children, 3, rect {
+                width = "fill",
+                margin = { top = style.height },
+                children = { toolbar.tab_bar("glass_win_" .. id .. "_wtab", {
+                    tabs = props.tabs,
+                    tab = props.tab,
+                    on_new_tab = props.on_new_tab,
+                    on_close_tab = props.on_close_tab,
+                    active = active,
+                }) },
+    })
+        end
         local panes = { content }
         if has_sidebar then
             table.insert(panes, 1, pane {
@@ -460,7 +500,7 @@ function M.window_frame(props)
             end
             return dark and (utility or not has_sidebar) and SHADOWS.active_tight or SHADOWS.active
         end),
-        geometry = not preview and overlay.bounds(id) or nil,
+        geometry = frame_geo,
         children = preview and { body } or overlay.root(body, id),
     })
 end

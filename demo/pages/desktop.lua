@@ -39,11 +39,14 @@ local bar = glass.menu_bar("demo", {
     },
 })
 
+local launching = state("demo_desktop_launching", false)
+
 local dock = glass.dock("demo", {
+    magnify = true,
     items = {
         { label = "Files", icon = "smile", color = "blue", running = true, on_click = say("Files") },
         { label = "Firefox", icon = "compass", color = "cyan", running = true, on_click = say("Firefox") },
-        { label = "Mail", icon = "mail", color = "blue", on_click = say("Mail") },
+        { label = "Mail", icon = "mail", color = "blue", bouncing = launching, on_click = say("Mail") },
         { label = "Chat", icon = "message-circle", color = "green", running = true, on_click = say("Chat") },
         { label = "Music", icon = "music", color = "pink", on_click = say("Music") },
         { label = "Photos", icon = "flower-2", color = "orange", on_click = say("Photos") },
@@ -68,9 +71,12 @@ local desktop = rect(glass.shape {
 })
 
 return section.page {
-    section.wide("Desktop", "A transparent menu bar whose menus switch as the pointer moves along it, and the Dock with running dots.",
+    section.wide("Desktop", "A transparent menu bar whose menus switch as the pointer moves along it, and the Dock with running dots. Move along the Dock to magnify its icons; Mail hops while it launches.",
         column { width = "fill", spacing = 12, children = {
             desktop,
-            section.labelled("last pick", glass.text(last, c.label, "body")),
+            row { spacing = 24, align_v = "center", children = {
+                section.labelled("last pick", glass.text(last, c.label, "body")),
+                glass.button("launch_mail", { label = launching:map(function(on) return on and "Finish launching Mail" or "Launch Mail" end), on_click = function() launching:set(not launching:get()) end }),
+            } },
         } }),
 }

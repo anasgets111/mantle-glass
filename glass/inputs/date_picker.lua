@@ -28,6 +28,10 @@ local PARTS = {
     minute = { 0, 59, "%02d" },
 }
 
+-- What an emptied part shows.
+local BLANK = { month = "mm", day = "dd", year = "yyyy", hour = "hh", minute = "mm" }
+local IDLE = { part = "", from = "", buf = "" }
+
 local M = {}
 
 -- Noon of a date, explicitly: `month` and `day` overflow into neighbours (day 0 is the last of the previous month).
@@ -221,7 +225,7 @@ function M.calendar(id, opts)
     }
 end
 
--- Date picker. `style = "textual"` is the fields and stepper; `"popover"` a compact field that opens the calendar.
+-- Date picker. `style = "textual"` is the fields and stepper; typing digits fills the focused part and moves on when it is full or the next digit could not fit, Backspace empties it; `"popover"` a compact field that opens the calendar.
 ---@class glass.DatePickerOpts
 ---@field value? StateSignal<glass.Date> Default now.
 ---@field time? boolean Adds hour and minute (24 h).
@@ -285,11 +289,16 @@ function M.date_picker(id, opts)
     end
 
     local sel = state("glass_date_part_" .. id, "day")
+    -- Digit entry: `part` takes the digits (it may be one past the part `from` that holds the key
+    -- focus, as focus cannot move itself), `buf` the digits typed so far, `blank` an emptied part.
+    local typing = state("glass_date_typing_" .. id, IDLE)
     local order = time and { "month", "/", "day", "/", "year", " ", "hour", ":", "minute" } or { "month", "/", "day", "/", "year" }
     local focus = {}
     local any = {}
+    local names, at = {}, {}
     for _, name in ipairs(order) do
         if PARTS[name] then
+            names[#names + 1], at[name] = name, #names + 1
             focus[name] = focused("glass_dp_focus_" .. id .. name)
             any[#any + 1] = focus[name]
         end
@@ -302,9 +311,44 @@ function M.date_picker(id, opts)
         end
         return false
     end)
+    local function type_digit(own, d)
+        local t = typing:get()
+        local part = t.from == own and t.part ~= "" and t.part or own
+        local v = value:get() or now()
+        local lo, hi = PARTS[part][1], PARTS[part][2] or days_in(v.year, v.month)
+        local buf = (t.part == part and t.buf or "") .. d
+        if tonumber(buf) > hi then
+            buf = d
+        end
+        local n = tonumber(buf) or lo
+        local full = part == "year" and #buf == 4 or part ~= "year" and (#buf == 2 or n * 10 > hi)
+        if n >= lo or full then
+            local out = core.merge({}, v)
+            out[part] = math.max(n, lo)
+            out.day = math.min(out.day, days_in(out.year, out.month))
+            commit(out)
+        end
+        local nxt = full and names[(at[part] or #names) + 1] or part
+        sel:set(nxt)
+        typing:set({ part = nxt, from = own, buf = full and "" or buf })
+    end
+    local function blank(own)
+        local t = typing:get()
+        local part = t.from == own and t.part ~= "" and t.part or own
+        sel:set(part)
+        typing:set({ part = part, from = own, buf = "", blank = true })
+    end
+
     local kids = {}
     for _, name in ipairs(order) do
-        local text_for = function(v) return string.format(PARTS[name] and PARTS[name][3] or "%s", v and v[name] or 0) end
+        local text_for = function(v, t)
+            if t.part == name and t.blank then
+                return BLANK[name]
+            elseif t.part == name and t.buf ~= "" then
+                return t.buf
+            end
+            return string.format(PARTS[name] and PARTS[name][3] or "%s", v and v[name] or 0)
+        end
         if not PARTS[name] then
             kids[#kids + 1] = core.text(name, c.label, kind)
         else
@@ -315,24 +359,40 @@ function M.date_picker(id, opts)
                 align_v = "center",
                 focused = focus[name],
                 on_key = function(k)
+                    if disabled:get() then
+                        return
+                    end
                     local dir = ({ Up = 1, Down = -1 })[k.name]
-                    if dir and not disabled:get() then
+                    if dir then
                         sel:set(name)
+                        typing:set(IDLE)
                         commit(step(value:get() or now(), name, dir))
+                        return true
+                    elseif k.text and k.text:match("^%d$") and not (k.modifiers.ctrl or k.modifiers.alt) then
+                        type_digit(name, k.text)
+                        return true
+                    elseif k.name == "BackSpace" or k.name == "Delete" then
+                        blank(name)
                         return true
                     end
                 end,
             }
-            tg.interact("dp_" .. id .. name, props, opts, function() sel:set(name) end)
-            local look = computed({ focus[name], anyfocus, sel, disabled, active, theme.scheme }, function(f, any_f, s, off, a, p)
+            tg.interact("dp_" .. id .. name, props, opts, function()
+                sel:set(name)
+                typing:set(IDLE)
+            end)
+            local look = computed({ focus[name], anyfocus, sel, typing, disabled, active, theme.scheme }, function(f, any_f, s, t, off, a, p)
                 local on = f or (not any_f and s == name)
+                if t.part ~= "" then
+                    on = t.part == name
+                end
                 if on and not off then
                     return { fill = a and p.accent or p.inactive_selected_fill, label = a and p.on_accent or p.label }
                 end
                 return { fill = theme.CLEAR, label = p[off and "tertiary_label" or "label"] }
             end)
             props.background = look:map(function(l) return l.fill end)
-            props.children = { core.text(value:map(text_for), look:map(function(l) return l.label end), kind) }
+            props.children = { core.text(computed({ value, typing }, text_for), look:map(function(l) return l.label end), kind) }
             kids[#kids + 1] = rect(core.shape(props))
         end
     end
