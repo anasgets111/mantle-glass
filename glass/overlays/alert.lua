@@ -1,4 +1,4 @@
--- Liquid Glass alert and sheet, from docs/spec/overlays.md (Alerts, Dialogs). Both are window modal:
+-- Liquid Glass alert and sheet, from the kit. Both are window modal:
 -- the kit's overlay dims the window and blocks it; an alert closes with its buttons or Escape.
 local theme = require("glass.theme")
 local core = require("glass.core")

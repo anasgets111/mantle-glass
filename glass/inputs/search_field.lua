@@ -1,10 +1,9 @@
--- Liquid Glass search field, from docs/spec/overlays.md (4.3 of foundations.md for the toolbar).
+-- Liquid Glass search field, from the kit.
 local theme = require("glass.theme")
 local core = require("glass.core")
 local fields = require("glass.internal.fields")
 local buttons = require("glass.internal.buttons")
 
-local c = theme.c
 local icon = core.icon
 
 local M = {}

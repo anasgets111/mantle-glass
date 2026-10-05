@@ -1,4 +1,4 @@
--- Liquid Glass popover: large glass with an arrow toward its anchor, from docs/spec/overlays.md.
+-- Liquid Glass popover: large glass with an arrow toward its anchor, from the kit.
 -- Closes on an outside click and on Escape. The open popover is a Lua local, since nodes cannot
 -- live in named state.
 local theme = require("glass.theme")

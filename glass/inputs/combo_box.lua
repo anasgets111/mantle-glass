@@ -1,4 +1,4 @@
--- Liquid Glass combo box: a text field with an inset menu button, from docs/spec/buttons.md.
+-- Liquid Glass combo box: a text field with an inset menu button, from the kit.
 local theme = require("glass.theme")
 local core = require("glass.core")
 local menu = require("glass.overlays.menu")

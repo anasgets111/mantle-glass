@@ -1,5 +1,5 @@
 -- Shared by text_field.lua, search_field.lua and combo_box.lua: the kit's input box (fill, border,
--- focus ring) and the engine textfield inside it (docs/spec/overlays.md, buttons.md).
+-- focus ring) and the engine textfield inside it.
 local theme = require("glass.theme")
 local core = require("glass.core")
 local material = require("glass.material")

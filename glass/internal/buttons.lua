@@ -1,5 +1,5 @@
 -- Shared by button.lua, popup_button.lua and color_well.lua: the kit's push-button colours per
--- kind and state (docs/spec/buttons.md) and the pressable, focusable shell every control uses.
+-- kind and state and the pressable, focusable shell every control uses.
 local theme = require("glass.theme")
 local core = require("glass.core")
 local material = require("glass.material")

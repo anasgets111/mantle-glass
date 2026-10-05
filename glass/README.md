@@ -1,8 +1,8 @@
 # glass: Liquid Glass for Mantle
 
 Liquid Glass controls for a Mantle config, built from Apple's UI kit. Every
-size, colour, glass layer and shadow comes from the kit; the extracted values are in
-`docs/spec/*.md` (regenerate with `docs/spec/kitdump.py` against the unzipped kit).
+size, colour, glass layer and shadow comes from the kit; values it lacks are marked
+`not in the kit` where they are set.
 
 ## Requirements
 

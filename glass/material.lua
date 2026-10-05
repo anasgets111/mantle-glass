@@ -1,7 +1,7 @@
 -- Liquid Glass and the standard materials, transcribed from Apple's UI kit. `M.glass(style,
 -- props)` spreads one style onto a box's props, following light and dark.
 --
--- Kit notation, kept as written so it can be checked against glass/docs/spec/foundations.md:
+-- Kit notation, kept as written so it can be checked against the kit:
 -- a fill is "RRGGBB[AA] [mode]", a shadow "RRGGBB[AA] [mode] x y blur spread", listed bottom to
 -- top as Sketch does. Modes: +L plus-lighter, +D plus-darker, or a CSS blend name.
 local theme = require("glass.theme")
@@ -165,7 +165,7 @@ M.STYLES = {
         light = { fills = { "F4F4F4" } },
         dark = { fills = { "2E2E2ED9" } },
     },
-    -- The Dock (docs/spec/overlays.md): glass r1, saturate 1, distortion 0.08, depth 0.9. Radius 15.
+    -- The Dock: glass r1, saturate 1, distortion 0.08, depth 0.9. Radius 15.
     dock = {
         lens = { 14, 16, 0.08 },
         light = { blur = 1, saturate = 1, fills = { "4D4D4D4C luminosity", "1A1A1A1A +D", "FFFFFF14 lighten" } },

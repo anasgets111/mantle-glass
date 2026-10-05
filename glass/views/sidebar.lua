@@ -1,4 +1,4 @@
--- Sidebar: the content of the window's glass pane, from docs/spec/sidebars.md. Rows select on
+-- Sidebar: the content of the window's glass pane, from the kit. Rows select on
 -- click, folders open in place, and a long sidebar scrolls.
 local theme = require("glass.theme")
 local core = require("glass.core")

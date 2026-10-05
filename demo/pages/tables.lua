@@ -5,6 +5,7 @@ local glass = require("glass")
 local c, pick = glass.theme.c, glass.theme.pick
 
 local picked = state("demo_tables_selected", { ["Notes.md"] = true })
+local opened = state("demo_tables_opened", "")
 local tree_picked = state("demo_tables_tree", {})
 local tree_open = state("demo_tables_tree_open", { src = true, ["src/glass"] = true })
 
@@ -48,7 +49,7 @@ local files = glass.table("files", {
     alternating = true,
     max_height = 336,
     sort = state("demo_tables_sort", { key = "name", ascending = true }),
-    on_activate = function(f) log.info("open " .. f.name) end,
+    on_activate = function(f) opened:set(f.name) end,
     columns = {
         { key = "name", title = "Name", width = 190, sortable = true, cell = function(f, e)
             return row { width = "fill", spacing = 6, align_v = "center", children = {
@@ -62,13 +63,14 @@ local files = glass.table("files", {
     },
 })
 
-local summary = picked:map(function(set)
+local summary = computed({ picked, opened }, function(set, last)
     local names = {}
     for name in pairs(set) do
         names[#names + 1] = name
     end
     table.sort(names)
-    return #names == 0 and "Selected: nothing" or "Selected: " .. table.concat(names, ", ")
+    local line = #names == 0 and "Selected: nothing" or "Selected: " .. table.concat(names, ", ")
+    return last ~= "" and line .. "   Opened: " .. last or line
 end)
 
 local TREE = {

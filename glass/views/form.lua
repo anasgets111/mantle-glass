@@ -1,5 +1,5 @@
 -- Grouped form: an inset rounded section of rows split by separators, and the row with its
--- leading icon, label, subtitle and trailing control. Metrics: docs/spec/sidebars.md "Forms".
+-- leading icon, label, subtitle and trailing control. Metrics from the kit.
 local theme = require("glass.theme")
 local core = require("glass.core")
 

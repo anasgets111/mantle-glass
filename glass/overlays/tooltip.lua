@@ -1,4 +1,4 @@
--- Liquid Glass tooltip, from docs/spec/overlays.md: square glass chip under the pointer after a hover
+-- Liquid Glass tooltip, from the kit: square glass chip under the pointer after a hover
 -- delay, drawn in the overlay so no ancestor clips it.
 local theme = require("glass.theme")
 local core = require("glass.core")

@@ -1,4 +1,4 @@
--- Liquid Glass push buttons and the arrow button, from docs/spec/buttons.md.
+-- Liquid Glass push buttons and the arrow button, from the kit.
 local theme = require("glass.theme")
 local core = require("glass.core")
 local buttons = require("glass.internal.buttons")

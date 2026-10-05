@@ -1,4 +1,4 @@
--- Liquid Glass toolbar items, from docs/spec/foundations.md 4: traffic lights, glass capsules of glyph
+-- Liquid Glass toolbar items, from the kit: traffic lights, glass capsules of glyph
 -- buttons, the back/forward group and the sidebar toggle.
 local theme = require("glass.theme")
 local core = require("glass.core")
@@ -47,7 +47,7 @@ function M.traffic_lights(opts)
             },
         })
     end
-    -- ponytail: minimise and zoom need `toplevel(id):minimize()` / `:maximize()` (mantle-27).
+    -- ponytail: minimise and zoom stay inert until the engine can ask the compositor for them.
     return row {
         spacing = utility and 7 or 9,
         align_v = "center",

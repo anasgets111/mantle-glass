@@ -1,4 +1,4 @@
--- Liquid Glass image well, from docs/spec/sidebars.md: a quinary-filled square in three spread rings,
+-- Liquid Glass image well, from the kit: a quinary-filled square in three spread rings,
 -- the image inset 2 px.
 local theme = require("glass.theme")
 local core = require("glass.core")

@@ -1,4 +1,4 @@
--- Liquid Glass color well: a capsule with a colour swatch inset 3 px, from docs/spec/buttons.md.
+-- Liquid Glass color well: a capsule with a colour swatch inset 3 px, from the kit.
 local theme = require("glass.theme")
 local core = require("glass.core")
 local buttons = require("glass.internal.buttons")

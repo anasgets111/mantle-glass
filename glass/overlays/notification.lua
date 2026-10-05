@@ -1,4 +1,4 @@
--- Liquid Glass notification banner, from docs/spec/overlays.md: top-right of the window under the toolbar, slides in,
+-- Liquid Glass notification banner, from the kit: top-right of the window under the toolbar, slides in,
 -- dismisses itself after a few seconds or on a click. One at a time; a new one replaces it.
 local theme = require("glass.theme")
 local core = require("glass.core")

@@ -1,5 +1,5 @@
 -- Liquid Glass window chrome: traffic lights, the glass toolbar and its items, and `app_window`, which
--- frames an app with an optional edge-to-edge sidebar. Metrics: docs/spec/foundations.md 3-4.
+-- frames an app with an optional edge-to-edge sidebar. Metrics from the kit.
 local theme = require("glass.theme")
 local core = require("glass.core")
 local material = require("glass.material")
@@ -25,14 +25,14 @@ local CHROME = {
     expanded = { height = 77, bar = 33, lights = { 9, 9.5 }, item = 36, toggle = { 36, 33, 32 }, list = 76 },
 }
 local UTILITY = { radius = 15, header = 24, tabs_header = 56, lights = { 8, 8 }, tab = { 44, 28 }, tab_top = 23 }
--- Resizable panes (docs/spec/sidebars.md: 256). not in the kit: the drag ranges, as native apps.
+-- Resizable panes, 256 wide as in the kit. not in the kit: the drag ranges, as native apps.
 local PANE = {
     sidebar = { default = 256, min = 180, max = 400 },
     inspector = { default = 256, min = 200, max = 400 },
 }
 local GRAB = 6
 
--- Window drop shadows (docs/spec/foundations.md 3.1): a wide ambient one and a 1 px rim. Dark without
+-- Window drop shadows: a wide ambient one and a 1 px rim. Dark without
 -- a sidebar uses the tighter one while active; every inactive window uses it at half strength.
 local RIM = { color = "#000000CC", blur = 1 }
 local SHADOWS = {
@@ -116,7 +116,7 @@ end
 local SOFT_BLUR = 20
 local SOFT_MASK = { gradient = "linear", angle = 180, stops = { { 0, "#FFFFFFFF" }, { 1, "#FFFFFF00" } } }
 
--- The band under the toolbar (docs/spec/foundations.md 2.5): "soft" fades the window's colour out,
+-- The band under the toolbar: "soft" fades the window's colour out,
 -- "hard" is the window's colour over a blur, with a hairline.
 local function scroll_edge(kind, height)
     if kind == "hard" then

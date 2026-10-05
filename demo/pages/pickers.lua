@@ -21,6 +21,8 @@ local d3 = state("demo_pick_cal", { year = 2026, month = 10, day = 5 })
 local d4 = state("demo_pick_pop", { year = 2026, month = 12, day = 24 })
 local tokens = state("demo_pick_tokens", { "Design", "Lua" })
 local picked = state("demo_pick_path", "")
+local OTHER_WALL = "/mnt/Work/1Wallpapers/Main/4k-cyberpunk.jpg"
+local well_image = state("demo_pick_well", section.WALL)
 local rating = state("demo_pick_rating", 3)
 local level = state("demo_pick_level", 0.55)
 
@@ -61,8 +63,10 @@ local tokens_col = column_of({
         glass.path_control("path_pop", { segments = PATH, style = "popup", on_select = function(i) picked:set(PATH[i].label) end }),
         glass.text(picked:map(function(p) return "selected: " .. (p or "") end), c.secondary_label, "body"),
     } }),
-    section.section("Image well", "Click to pick an image.", line({
-        glass.image_well("well", { source = section.WALL, size = 64, on_click = function() log.info("image well clicked") end }),
+    section.section("Image well", "A click stands in for a picker: it swaps the picture.", line({
+        glass.image_well("well", { source = well_image, size = 64, on_click = function()
+            well_image:set(well_image:get() == section.WALL and OTHER_WALL or section.WALL)
+        end }),
         glass.image_well("well_empty", { size = 64 }),
     })),
 })

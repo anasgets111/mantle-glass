@@ -1,4 +1,4 @@
--- Liquid Glass menu bar and Dock, from docs/spec/overlays.md. Desktop chrome rather than app chrome:
+-- Liquid Glass menu bar and Dock, from the kit. Desktop chrome rather than app chrome:
 -- put them in a `panel`, and return `glass.overlay.popup(<panel id>)` beside it so their menus
 -- and labels draw past the panel.
 local theme = require("glass.theme")

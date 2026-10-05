@@ -1,4 +1,4 @@
--- Liquid Glass pop-up and pull-down buttons, from docs/spec/buttons.md.
+-- Liquid Glass pop-up and pull-down buttons, from the kit.
 local theme = require("glass.theme")
 local core = require("glass.core")
 local menu = require("glass.overlays.menu")

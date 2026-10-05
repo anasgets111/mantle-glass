@@ -1,4 +1,4 @@
--- Liquid Glass overlay scroller, from docs/spec/foundations.md 5: a 6 px capsule knob in a 12 px strip
+-- Liquid Glass overlay scroller, from the kit: a 6 px capsule knob in a 12 px strip
 -- at the trailing edge, over the content, shown while it scrolls and faded out after. No track.
 local theme = require("glass.theme")
 local core = require("glass.core")

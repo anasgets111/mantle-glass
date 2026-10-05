@@ -1,4 +1,4 @@
--- Liquid Glass menu, from docs/spec/overlays.md: glass panel under an anchor, rows that highlight under
+-- Liquid Glass menu, from the kit: glass panel under an anchor, rows that highlight under
 -- the pointer, one level of submenus to the side, keyboard up/down/left/right/Enter/Escape.
 -- Callbacks cannot live in named state, so the open menu is a Lua local the layer builder reads.
 local theme = require("glass.theme")

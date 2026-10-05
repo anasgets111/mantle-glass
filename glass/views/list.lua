@@ -3,7 +3,7 @@
 local theme = require("glass.theme")
 local core = require("glass.core")
 
-local c, FADE = theme.c, theme.motion.fade
+local FADE = theme.motion.fade
 
 -- not in the kit: the kit has no table or list specs; the medium sidebar row's metrics stand in.
 local ROW = { height = 32, radius = 8, inset = 4, pad = 10, max_height = 320 }

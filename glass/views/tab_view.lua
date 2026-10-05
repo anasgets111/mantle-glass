@@ -1,6 +1,5 @@
 -- Tab view: a segmented control centred over a group box, as Liquid Glass draws an NSTabView. The
 -- content swaps through `children`, so a hidden tab is not built.
-local core = require("glass.core")
 local segmented = require("glass.controls.segmented_control").segmented_control
 local group_box = require("glass.views.group_box").group_box
 

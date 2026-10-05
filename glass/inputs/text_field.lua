@@ -1,5 +1,4 @@
--- Liquid Glass text field, from docs/spec/overlays.md.
-local theme = require("glass.theme")
+-- Liquid Glass text field, from the kit.
 local fields = require("glass.internal.fields")
 
 local M = {}
