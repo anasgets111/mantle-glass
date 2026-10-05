@@ -10,9 +10,23 @@ local merge, text, icon = core.merge, core.text, core.icon
 
 local M = {}
 
--- ponytail: there is no toplevel activation signal yet (mantle-27: `toplevel(id).state`); the
--- window always draws active. Bind this to the window's `activated` state once it lands.
-M.active = state("glass_window_active", true)
+local ALWAYS = theme.dark:map(function() return true end)
+local actives = {}
+
+-- Whether window `id` has the keyboard, as a signal; always true for `nil` (no window to follow).
+-- Components drawn in a window's chrome take its id as `opts.window`.
+function M.active(id)
+    if id == nil then
+        return ALWAYS
+    end
+    actives[id] = actives[id] or toplevel(id):state():map(function(s) return s.activated end)
+    return actives[id]
+end
+
+-- A glass style while `active`, its inactive variant otherwise.
+local function by_activity(style, active)
+    return active:map(function(on) return on and style or style .. "_inactive" end)
+end
 
 -- Chrome per toolbar style: bar height, traffic-light origin, toolbar item size.
 local CHROME = {
@@ -25,12 +39,13 @@ local SIDEBAR_WIDTH = 256
 -- Close, minimise, zoom: 14 px dots on a 23 px pitch, grey while the window is inactive.
 function M.traffic_lights(opts)
     opts = opts or {}
+    local active = M.active(opts.window)
     local function dot(role, run, label)
         return rect(core.shape {
             width = 14,
             height = 14,
             radius = 7,
-            background = computed({ M.active, theme.scheme }, function(on, p) return on and p[role] or p.traffic_inactive end),
+            background = computed({ active, theme.scheme }, function(on, p) return on and p[role] or p.traffic_inactive end),
             shadows = { { color = "#00000073", spread = 0.5, inset = true } },
             accessible_name = label,
             focus_ring = false,
@@ -68,7 +83,7 @@ local function glyph_button(id, item, inner)
 end
 
 -- A capsule of glass holding toolbar buttons. opts: items ({ icon, label, on_click, selected }),
--- size ("xl" 36 high, default; "medium" 24).
+-- size ("xl" 36 high, default; "medium" 24), window (the id whose focus it follows).
 function M.toolbar_group(id, opts)
     local xl = opts.size ~= "medium"
     local inner, pad = xl and 28 or 20, xl and 4 or 2
@@ -76,7 +91,7 @@ function M.toolbar_group(id, opts)
     for i, item in ipairs(opts.items) do
         kids[i] = glyph_button(id .. "_" .. i, item, inner)
     end
-    return row(material.glass("small", {
+    return row(material.glass(by_activity("small", M.active(opts.window)), {
         height = inner + 2 * pad,
         align_v = "center",
         radius = theme.CAPSULE,
@@ -88,11 +103,12 @@ end
 
 -- A single toolbar button: a group of one.
 function M.toolbar_button(id, opts)
-    return M.toolbar_group(id, { size = opts.size, items = { opts } })
+    return M.toolbar_group(id, { size = opts.size, window = opts.window, items = { opts } })
 end
 
 local function title_block(props)
-    local kids = { text(props.title, c.vibrant_label, props.sidebar and "sidebar_title" or "window_title", material.vibrant({})) }
+    local title_color = theme.pick(M.active(props.id), "vibrant_label", "vibrant_tertiary_label")
+    local kids = { text(props.title, title_color, props.sidebar and "sidebar_title" or "window_title", material.vibrant({})) }
     if props.subtitle then
         kids[2] = text(props.subtitle, c.vibrant_tertiary_label, "control_small", material.vibrant({}))
     end
@@ -146,7 +162,7 @@ end
 function M.app_window(props)
     local style = CHROME[props.toolbar or "unified"]
     local has_sidebar = props.sidebar ~= nil
-    local lights = M.traffic_lights({ on_close = props.on_close })
+    local lights = M.traffic_lights({ on_close = props.on_close, window = props.id })
     local bar = {}
     if props.leading then
         for _, node in ipairs(props.leading) do bar[#bar + 1] = node end
@@ -183,7 +199,7 @@ function M.app_window(props)
     }
     local panes = { content }
     if has_sidebar then
-        table.insert(panes, 1, column(material.glass("sidebar", {
+        table.insert(panes, 1, column(material.glass(by_activity("sidebar", M.active(props.id)), {
             width = SIDEBAR_WIDTH,
             height = "fill",
             children = {
@@ -201,10 +217,23 @@ function M.app_window(props)
             children = { lights },
         }
     end
+    local window_state = toplevel(props.id):state()
+    -- Square the corners the window shares with a screen edge or a neighbour, and all of them maximised.
     local frame = rect(core.shape {
         width = "fill",
         height = "fill",
-        radius = theme.WINDOW_RADIUS,
+        radius = window_state:map(function(s)
+            local t, R = s.tiled, theme.WINDOW_RADIUS
+            if s.maximized or s.fullscreen then
+                return 0
+            end
+            return {
+                top_left = (t.top or t.left) and 0 or R,
+                top_right = (t.top or t.right) and 0 or R,
+                bottom_right = (t.bottom or t.right) and 0 or R,
+                bottom_left = (t.bottom or t.left) and 0 or R,
+            }
+        end),
         clip = "rounded",
         border_width = 1,
         border_color = c.window_border,
@@ -214,6 +243,7 @@ function M.app_window(props)
     table.insert(grips, 1, frame)
     return window(merge({
         background = CLEAR,
+        decorations = "client",
         on_escape = overlay.escape,
         on_key = overlay.key,
         child = rect { width = "fill", height = "fill", children = grips },

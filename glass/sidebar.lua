@@ -33,13 +33,14 @@ end
 
 -- opts: sections ({ { header?, items = { { name, label, icon?, count?, children? } } } }),
 -- value (state of the selected item name; default the first item), size ("small", "medium"
--- default, "large"), on_select(name). A child list nests items to any depth.
+-- default, "large"), on_select(name), window (the id whose focus it follows). A child list nests
+-- items to any depth.
 function M.sidebar(id, opts)
     local s = SIZES[opts.size or "medium"]
     local first = opts.sections[1].items[1].name
     ---@type StateSignal<string>
     local value = opts.value or state("glass_sidebar_" .. id, first)
-    local active = window.active
+    local active = window.active(opts.window)
     local title_color = theme.pick(active, "vibrant_label", "vibrant_tertiary_label")
     local icon_color = theme.pick(active, "vibrant_accent", "vibrant_secondary_label")
     -- not in the kit: without the plus-lighter/darker blend a tertiary vibrant grey vanishes on the pane.

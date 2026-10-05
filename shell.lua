@@ -69,9 +69,10 @@ return {
         app_id = "mantle-glass-demo",
         min_size = { width = 1100, height = 760 },
         on_close = function() process.detach("mantle", { "stop", "--pid", tostring(mantle.pid) }) end,
-        sidebar = glass.sidebar("nav", { value = stored, sections = { { header = "Controls", items = ITEMS } } }),
+        sidebar = glass.sidebar("nav", { value = stored, window = "glass", sections = { { header = "Controls", items = ITEMS } } }),
         trailing = {
             glass.toolbar_group("look", {
+                window = "glass",
                 items = {
                     { icon = "palette", label = "Next accent colour", on_click = next_accent },
                     { icon = theme.dark:map(function(d) return d and "sun" or "moon" end), label = "Toggle appearance", on_click = toggle_dark },

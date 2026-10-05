@@ -76,7 +76,7 @@ local function arrow(edge, margin)
         -- not in the kit: the arrow is flat, glass cannot be unioned into it. It is opaque, since
         -- the body's shadow darkens the window behind a translucent arrow into a visible notch.
         fill = computed({ theme.dark, theme.scheme }, function(d, p)
-            return flat_over(material.STYLES.large[d and "dark" or "light"].flat, p.window_background)
+            return flat_over(d and "#1A1A1A99" or "#FFFFFFB2", p.window_background)
         end),
         commands = commands,
     }

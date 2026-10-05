@@ -37,25 +37,6 @@ local wall = rect(glass.shape {
     },
 })
 
-local FLAGS = { "layers", "blend", "inset", "effect" }
-local NOTES = {
-    layers = "the style's stacked fills",
-    blend = "plus-lighter / plus-darker vibrancy",
-    inset = "inner shadows, the glass rim",
-    effect = "backdrop blur and saturation",
-}
-local rows = {}
-for i, flag in ipairs(FLAGS) do
-    local on = material.HAS[flag]
-    rows[i] = row { spacing = 12, height = 24, align_v = "center", children = {
-        glass.text(flag, c.label, "control", { width = 90 }),
-        glass.text(on and "on" or "off", on and c.green or c.tertiary_label, "control", { width = 40 }),
-        glass.text(NOTES[flag], c.secondary_label, "body"),
-    } }
-end
-
 return section.page {
     section.section("Styles", "Each style over the wallpaper, with its backdrop blur radius and saturation (light / dark) from the kit.", wall),
-    section.section("Engine features", "Glass layers, blend and inset come with engine features; until then a style is one flat fill, a blur and its drop shadows. material.HAS shows which are on.",
-        glass.group_box("has", { content = column { spacing = 2, children = rows } })),
 }

@@ -4,10 +4,6 @@ local M = {}
 
 M.dark = state("glass_dark", true)
 
--- ponytail: whether the engine draws blend modes yet (mantle-27). Until it does, each `vibrant_*`
--- role resolves to its plain counterpart, which is what a vibrant colour looks like over neutral
--- glass. Delete with material.HAS once blend lands.
-M.BLEND = false
 M.accent = state("glass_accent", "blue")
 
 -- System colours: { light, dark, light vibrant (plus-darker), dark vibrant (plus-lighter) }.
@@ -78,14 +74,6 @@ local function palette(dark, accent)
     local a = M.SYSTEM[accent] or M.SYSTEM.blue
     p.accent = a[dark and 2 or 1]
     p.vibrant_accent = a[dark and 4 or 3]
-    if not M.BLEND then
-        for role in pairs(p) do
-            local plain = role:match("^vibrant_(.+)$")
-            if plain and p[plain] then
-                p[role] = p[plain]
-            end
-        end
-    end
     return p
 end
 

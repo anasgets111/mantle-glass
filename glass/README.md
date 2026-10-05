@@ -7,8 +7,8 @@ size, colour, glass layer and shadow comes from the kit; the extracted values ar
 ## Requirements
 
 A Mantle build with `effect` (backdrop blur and saturate), layered `background` and `shadows` with
-per-layer `blend`, inset shadows and node `blend`. Until each lands,
-`glass.material.HAS` degrades the glass to what the engine has. Fonts: Inter (stands in for SF
+per-layer `blend`, inset shadows, node `blend` and `effect.shader` with `input = "backdrop"`
+(refraction, `glass/lens.frag`; set `glass.material.LENS` if `glass/` is not in the config root). Fonts: Inter (stands in for SF
 Pro) and Lucide (`ttf-lucide-font`, stands in for SF Symbols).
 
 ## Setup
