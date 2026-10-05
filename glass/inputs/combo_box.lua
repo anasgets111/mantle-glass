@@ -1,7 +1,7 @@
 -- Liquid Glass combo box: a text field with an inset menu button, from docs/spec/buttons.md.
 local theme = require("glass.theme")
 local core = require("glass.core")
-local menu = require("glass.menu")
+local menu = require("glass.overlays.menu")
 local buttons = require("glass.internal.buttons")
 local fields = require("glass.internal.fields")
 

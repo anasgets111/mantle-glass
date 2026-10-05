@@ -4,7 +4,7 @@ local theme = require("glass.theme")
 local core = require("glass.core")
 local fields = require("glass.internal.fields")
 local tg = require("glass.internal.toggles")
-local menu = require("glass.menu")
+local menu = require("glass.overlays.menu")
 local overlay = require("glass.overlay")
 
 local c = theme.c

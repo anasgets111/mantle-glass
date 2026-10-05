@@ -4,7 +4,7 @@ local theme = require("glass.theme")
 local core = require("glass.core")
 local material = require("glass.material")
 local overlay = require("glass.overlay")
-local checkbox = require("glass.checkbox").checkbox
+local checkbox = require("glass.controls.checkbox").checkbox
 
 local c = theme.c
 local text, icon = core.text, core.icon

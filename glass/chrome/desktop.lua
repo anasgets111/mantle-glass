@@ -4,8 +4,8 @@
 local theme = require("glass.theme")
 local core = require("glass.core")
 local material = require("glass.material")
-local menu = require("glass.menu")
-local tooltip = require("glass.tooltip").tooltip
+local menu = require("glass.overlays.menu")
+local tooltip = require("glass.overlays.tooltip").tooltip
 
 local M = {}
 

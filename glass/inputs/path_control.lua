@@ -2,7 +2,7 @@
 -- shows the last segment and lists the path in a menu.
 local theme = require("glass.theme")
 local core = require("glass.core")
-local menu = require("glass.menu")
+local menu = require("glass.overlays.menu")
 local buttons = require("glass.internal.buttons")
 
 local c = theme.c

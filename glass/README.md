@@ -43,7 +43,7 @@ return { glass.app_window { id = "app", title = "My app", child = column { child
 
 ## Components
 
-One file per component family, in `init.lua`'s order; `require("glass")` loads them all, `require("glass.<file>")` one.
+One file per component family, in a folder per kind (below); `require("glass")` loads them all, `require("glass.<folder>.<file>")` one.
 `internal/` holds shared helpers and is not public API. Every `opts` field is optional unless marked required. Fields marked
 "signal" take a plain value or a signal.
 
@@ -58,7 +58,11 @@ Shared fields, used by most controls:
 | `name` | accessible name; default the label or `id` |
 | `props` | extra node props merged over the control's own |
 
-### core.lua (`glass.core`, `glass.merge`, `glass.text`, `glass.icon`, `glass.shape`)
+### Base (root)
+
+Tokens, building blocks, glass and the overlay host; every component uses them.
+
+#### core.lua (`glass.core`, `glass.merge`, `glass.text`, `glass.icon`, `glass.shape`)
 
 Building blocks every component uses.
 
@@ -74,7 +78,38 @@ Building blocks every component uses.
 | `focusable(name, props)` | For a Tab stop (needs `on_click` and `accessible_name`): accent focus ring on keyboard focus, in place of the engine outline. `props` must not set `shadows` |
 | `focus_ring(accent)` | The ring as a `shadows` list |
 
-### window.lua (`app_window`, `traffic_lights`, `toolbar_group`, `toolbar_button`)
+#### material.lua (`glass.material`)
+
+| Name | Meaning |
+| :--- | :--- |
+| `glass(style, props, opts?)` | Spreads `style` (name or signal) onto `props` (`background`, `shadows`, `effect`, `behind_blur`, `corner_smoothing`), following light and dark. `opts.tint`: colour or signal, for `small_tinted`; `opts.shadows`: signal of a shadow list put on top (e.g. a focus ring) |
+| `vibrant(props)` | Sets `blend` so `vibrant_*` colours take the glass's tone; returns `props` |
+| `LENS` | Path of `lens.frag`; default `<config>/glass/lens.frag`. Set it if `glass/` is not in the config root |
+| `STYLES` | Style table. Names: `small`, `small_inactive`, `small_tinted`, `knob`, `large`, `menu`, `notification`, `sidebar`, `sidebar_inactive`, `tooltip`, and the materials `ultra_thick`, `thick`, `regular`, `thin`, `ultra_thin`. `small`, `knob` and `large` refract through the lens |
+
+#### theme.lua (`glass.theme`)
+
+| Name | Meaning |
+| :--- | :--- |
+| `appearance` | State: `"system"` (default; follows `mantle.appearance`), `"light"` or `"dark"` |
+| `dark` | Signal: whether the colours are dark now |
+| `accent` | State: `"system"` (default; the desktop's accent, matched to the nearest name) or a name from `ACCENTS` |
+| `accent_name` | Signal: the accent in use |
+| `high_contrast`, `reduced_motion` | Signals from the desktop: Increase Contrast deepens translucent labels, fills and separators; Reduce Motion swaps springs for quick ones |
+| `ACCENTS` | `blue`, `purple`, `pink`, `red`, `orange`, `yellow`, `green`, `gray` |
+| `c.<role>` | Live colour signal of one role (`label`, `secondary_fill`, `vibrant_label`, `accent`, `on_accent`, `window_background`, system names such as `red`, ...); follows `dark` and `accent` |
+| `scheme` | Signal of the whole palette table, for `computed` |
+| `pick(flag, yes, no)` | Signal of role `yes` or `no` chosen by boolean signal `flag` |
+| `alpha(color, a)` | `"#RRGGBB[AA]"` at alpha 0..1 (plain string) |
+| `type` | Text styles `{ size, weight, line height, tracking }`: `large_title`, `title1..3`, `headline`, `body`, `callout`, `subheadline`, `footnote`, `caption1`, `caption2`, `control`, `control_small`, `control_mini`, `window_title`, `sidebar_title` |
+| `SIZES` | Per `size`: `height`, `radius`, `label` (type style), `inset`, `icon` |
+| `motion` | Springs and fade: `default`, `smooth`, `snappy`, `bouncy`, `press`, `fade`; for `animate` |
+| Others | `SYSTEM`, `vibrancy`, `CLEAR`, `CAPSULE`, `SMOOTHING`, `FONT`, `FONT_DISPLAY`, `WINDOW_RADIUS`, `CONTENT_INSET` |
+### Chrome (`chrome/`)
+
+Window frames, toolbar items and desktop chrome.
+
+#### chrome/window.lua (`app_window`, `utility_window`, `window_frame`), chrome/toolbar.lua (`traffic_lights`, `toolbar_group`, `toolbar_button`, `toolbar_navigation`, `sidebar_toggle`)
 
 Liquid Glass window chrome. `app_window` frames an app, registers the window's overlay layers and returns a `window`.
 
@@ -106,7 +141,20 @@ A press on empty chrome moves the window, right press opens the window menu, and
 
 `traffic_lights` also takes `kind = "utility"` and `active`; `toolbar_group`, `toolbar_button` and `sidebar` take `active` (a signal that replaces the window's focus, for previews); a toolbar item takes `disabled`.
 
-### button.lua (`button`, `arrow_button`)
+#### chrome/desktop.lua (`menu_bar`, `dock`)
+
+Desktop chrome for a shell: put them in a `panel` and return `glass.overlay.popup(<panel id>)` beside it.
+
+| Function | opts |
+| :--- | :--- |
+| `menu_bar(id, opts)` | `menus` (`{ title?, icon?, bold?, items }`; a click opens one, moving along the bar switches while one is open), `trailing` (status nodes), `ink` (title colour; default white), `window` |
+| `dock(id, opts)` | `items` (`{ label?, icon?, color? (a `theme.SYSTEM` name), image?, running?, on_click? }` or `{ separator = true }`; labels show as tooltips), `window` |
+
+### Controls (`controls/`)
+
+Buttons, toggles, sliders and indicators.
+
+#### controls/button.lua (`button`, `arrow_button`)
 
 Push buttons and the arrow button.
 
@@ -115,7 +163,7 @@ Push buttons and the arrow button.
 | `button(id, opts)` | `kind` (`"bordered"` default, `"default"`, `"destructive"`, `"default_destructive"`, `"tinted"`, `"borderless"`, `"toggle"`), `size`, `label`, `icon` (leading Lucide name; alone makes a square), `value` (selected state; a `toggle` keeps its own boolean state if omitted), `disabled`, `on_glass`, `window`, `on_click`, `name` (default label, else icon), `props` |
 | `arrow_button(id, opts)` | `size`, `icon` (default `"chevrons-up-down"`), `disabled`, `on_glass`, `on_click`, `name`, `props` |
 
-### popup_button.lua (`popup_button`, `pull_down_button`)
+#### controls/popup_button.lua (`popup_button`, `pull_down_button`)
 
 A label and chevron that open a menu (`glass.menu`) as wide as the button.
 
@@ -124,45 +172,45 @@ A label and chevron that open a menu (`glass.menu`) as wide as the button.
 | `popup_button(id, opts)` | `items` (required; strings or `{ label, value, ...menu item }`), `value` (state of the selected value; default first), `on_change(value)`, `size`, `width` (default fits label), `disabled`, `on_glass`, `name`, `props` |
 | `pull_down_button(id, opts)` | `label`, `items` (menu items with `on_click`), `size`, `width`, `disabled`, `on_glass`, `name`, `props` |
 
-### color_well.lua (`color_well`)
+#### controls/color_well.lua (`color_well`)
 
 | Function | opts |
 | :--- | :--- |
 | `color_well(id, opts)` | `value` (state, `"#RRGGBB"`; default system green), `size`, `selected` (signal; the active well), `disabled`, `on_click` (open the picker), `name`, `props` |
 
-### checkbox.lua (`checkbox`, `radio_group`)
+#### controls/checkbox.lua (`checkbox`, `radio_group`)
 
 | Function | opts |
 | :--- | :--- |
 | `checkbox(id, opts)` | `value` (state `true`, `false` or `"mixed"`; a click on mixed turns on), `label`, `size`, `disabled`, `on_glass`, `window`, `on_change(value)` |
 | `radio_group(id, opts)` | `options` (required; labels), `value` (state of the chosen label; default first), `horizontal`, `size`, `disabled`, `on_glass`, `window`, `on_change(label)` |
 
-### switch.lua (`switch`)
+#### controls/switch.lua (`switch`)
 
 | Function | opts |
 | :--- | :--- |
 | `switch(id, opts)` | `value` (state boolean), `size`, `disabled`, `on_glass`, `window`, `label` (accessible name), `on_change(on)` |
 
-### segmented_control.lua (`segmented_control`)
+#### controls/segmented_control.lua (`segmented_control`)
 
 | Function | opts |
 | :--- | :--- |
 | `segmented_control(id, opts)` | `items` (required; `{ icon, label, value }`, key is `value`, else `label`, else `icon`), `value` (state of the key; with `multiple`, a set `{ [key] = true }`; default first item), `multiple`, `size`, `disabled`, `on_glass`, `window`, `on_change(value)` |
 
-### stepper.lua (`stepper`)
+#### controls/stepper.lua (`stepper`)
 
 | Function | opts |
 | :--- | :--- |
 | `stepper(id, opts)` | `value` (state number; default `max(min, 0)`), `min`, `max` (unbounded), `step` (1), `size`, `disabled`, `on_glass`, `on_change(value)` |
 
-### slider.lua (`slider`, `circular_slider`)
+#### controls/slider.lua (`slider`, `circular_slider`)
 
 | Function | opts |
 | :--- | :--- |
 | `slider(id, opts)` | `value` (state number; default `neutral` or `min`), `min`, `max` (0, 1), `step`, `width` (140; track is 20 px shorter), `size`, `neutral` (value; fill grows from it), `ticks` (count), `snap` (snap to ticks), `disabled`, `on_glass`, `window`, `label`, `on_change(value)`, `vertical` (upright, minimum at the bottom; `height` is then the length, default 140) |
 | `circular_slider(id, opts)` | `value` (state number; default `min`), `min`, `max` (0, 1), `step`, `size`, `disabled`, `on_glass`, `label`, `on_change(value)`. Turns over 270 degrees |
 
-### progress.lua (`progress_bar`, `progress_ring`, `spinner`)
+#### controls/progress.lua (`progress_bar`, `progress_ring`, `spinner`)
 
 Fills go grey while the window is inactive. `size` here is only `"small"` or `"regular"`. `id` is unused.
 
@@ -172,7 +220,23 @@ Fills go grey while the window is inactive. `size` here is only `"small"` or `"r
 | `progress_ring(_, opts)` | `value` (0..1), `size` (16 or 32 px), `on_glass`, `window` |
 | `spinner(_, opts)` | `size` (16 or 32 px), `window` |
 
-### text_field.lua, search_field.lua, combo_box.lua (`text_field`, `search_field`, `combo_box`)
+#### controls/level_indicator.lua (`level_indicator`)
+
+Bars go green, yellow from `warning` up, red from `critical` up. Colours go grey while the window is inactive.
+
+| Function | opts |
+| :--- | :--- |
+| `level_indicator(id, opts)` | `style` (`"continuous"` default, `"discrete"` cells, `"rating"` stars), `value` (state or number; default `min`), `min` (0), `max` (1; rating 5 stars), `warning`, `critical`, `cells` (10), `editable` (rating: click or arrows set it), `width` (140), `size`, `disabled`, `window`, `on_change(value)` |
+
+#### controls/image_well.lua (`image_well`)
+
+The kit's 28 px well: `source` (image path), `size`, `fit` (`"contain"` default), `on_click` (makes it focusable), `label`.
+
+### Inputs (`inputs/`)
+
+Text entry and pickers.
+
+#### inputs/text_field.lua, inputs/search_field.lua, inputs/combo_box.lua (`text_field`, `search_field`, `combo_box`)
 
 Each returns `node, { value, focus() }`; wrap the call in parentheses to keep only the node. `value` (state of the text) is shared by all three.
 
@@ -182,7 +246,7 @@ Each returns `node, { value, focus() }`; wrap the call in parentheses to keep on
 | `search_field(id, opts)` | As `text_field`, plus `toolbar` (on small glass; `size` `"regular"` or `"xl"`, width 149 or 159). `placeholder` defaults to `"Search"`; shows a clear button once filled; Escape clears |
 | `combo_box(id, opts)` | As `text_field`, plus `items` (strings; a pick fills the field and calls `on_change`) |
 
-### token_field.lua (`token_field`)
+#### inputs/token_field.lua (`token_field`)
 
 Text field whose entries (Return or comma) become accent-tinted capsule tokens that wrap onto new lines. Click a token to select it (Backspace or Delete removes it); Backspace in an empty entry removes the last.
 
@@ -190,7 +254,7 @@ Text field whose entries (Return or comma) become accent-tinted capsule tokens t
 | :--- | :--- |
 | `token_field(id, opts)` | `value` (state of a string list; default empty), `suggestions` (strings shown in a menu while typing, matched on their start), `placeholder` (while empty), `size`, `width` (240), `disabled`, `window`, `name`, `on_change(tokens)` |
 
-### date_picker.lua (`date_picker`, `calendar`)
+#### inputs/date_picker.lua (`date_picker`, `calendar`)
 
 A date is `{ year, month, day }`, plus `hour`, `minute` with `time`. Dates go through `os.time`/`os.date` with explicit times only.
 
@@ -199,21 +263,17 @@ A date is `{ year, month, day }`, plus `hour`, `minute` with `time`. Dates go th
 | `date_picker(id, opts)` | `value` (state of a date; default now), `time` (adds 24 h hour and minute), `style` (`"textual"` default: fields and a stepper, Up/Down step the selected part; `"popover"`: a compact field that opens the calendar), `size`, `disabled`, `window`, `on_change(date)` |
 | `calendar(id, opts)` | `value` (state of a date), `view` (state `{ year, month }` shown), `disabled`, `window`, `on_change(date)`. Month grid with previous, next and Today; selected day accent, today outlined; arrows move the day, Page Up/Down the month |
 
-### path_control.lua (`path_control`)
+#### inputs/path_control.lua (`path_control`)
 
 | Function | opts |
 | :--- | :--- |
 | `path_control(id, opts)` | `segments` (required; `{ label, icon? }`, root first, fixed at build), `style` (`"standard"` breadcrumb with chevrons, `"popup"` shows the last and lists the path in a menu), `size`, `disabled`, `on_glass`, `window`, `on_select(index)` |
 
-### level_indicator.lua (`level_indicator`)
+### Views (`views/`)
 
-Bars go green, yellow from `warning` up, red from `critical` up. Colours go grey while the window is inactive.
+Containers that lay out or scroll content.
 
-| Function | opts |
-| :--- | :--- |
-| `level_indicator(id, opts)` | `style` (`"continuous"` default, `"discrete"` cells, `"rating"` stars), `value` (state or number; default `min`), `min` (0), `max` (1; rating 5 stars), `warning`, `critical`, `cells` (10), `editable` (rating: click or arrows set it), `width` (140), `size`, `disabled`, `window`, `on_change(value)` |
-
-### sidebar.lua (`sidebar`)
+#### views/sidebar.lua (`sidebar`)
 
 Content for `app_window`'s `sidebar`: scrolling rows, folders that open in place.
 
@@ -221,27 +281,27 @@ Content for `app_window`'s `sidebar`: scrolling rows, folders that open in place
 | :--- | :--- |
 | `sidebar(id, opts)` | `sections` (required; `{ header?, items = { { name, label, icon?, count?, children? } } }`, `children` nests to any depth), `value` (state of the selected `name`; default first item), `size` (`"small"`, `"medium"` default, `"large"`), `on_select(name)`, `window` |
 
-### disclosure.lua (`disclosure_button`, `disclosure_group`)
+#### views/disclosure.lua (`disclosure_button`, `disclosure_group`)
 
 | Function | opts |
 | :--- | :--- |
 | `disclosure_button(id, opts)` | `value` (state boolean, true = expanded), `size`, `disabled`, `on_glass`, `label` (accessible name), `on_change(expanded)` |
 | `disclosure_group(id, opts)` | `label`, `content` (node), `value` (state boolean), `on_change(expanded)` |
 
-### form.lua (`form_section`, `form_row`)
+#### views/form.lua (`form_section`, `form_row`)
 
 | Function | opts |
 | :--- | :--- |
 | `form_section(_, opts)` | `rows` (required; nodes, usually `form_row`; split by separators), `header`, `footer` (string or signal) |
 | `form_row(id, opts)` | `label`, `subtitle`, `icon` (grey 24 px service icon), `trailing` (node, right aligned), `control` (true when `trailing` is a 24 px control: 48 high, else 40; a subtitle makes it 56), `on_click` (makes the row a Tab stop) |
 
-### group_box.lua (`group_box`)
+#### views/group_box.lua (`group_box`)
 
 | Function | opts |
 | :--- | :--- |
 | `group_box(_, opts)` | `content` (node), `title` (string or signal) |
 
-### list.lua (`list`)
+#### views/list.lua (`list`)
 
 Scrolling inset list on the engine's `list` node; selection is an accent fill.
 
@@ -249,7 +309,7 @@ Scrolling inset list on the engine's `list` node; selection is an accent fill.
 | :--- | :--- |
 | `list(id, opts)` | `items` (required; array or signal of arrays), `row(item, emphasized, selected)` (required; returns a node; boolean signals: `emphasized` while the row has the accent fill, so content can switch to `on_accent`; `selected` stays true while the window is inactive and the fill is grey), `key(item)` (unique string; default `tostring`), `value` (state of the selected key), `alternating` (tint every other row), `max_height` (320; longer lists scroll), `on_select(item)`, `window` |
 
-### table.lua (`table`, `outline`)
+#### views/table.lua (`table`, `outline`)
 
 Header over a scrolling list of rows, on the engine's `list` node. Selection is an accent fill, grey while the window is inactive. Keys: Up/Down (Shift extends), Home/End, Page Up/Down, Return, Ctrl+A, Space toggles, type-to-select on the first column; double-click or Return calls `on_activate`. Drag a header divider to resize.
 
@@ -258,13 +318,13 @@ Header over a scrolling list of rows, on the engine's `list` node. Selection is 
 | `table(id, opts)` | `columns` (required; `{ key, title, width (px or "fill"), align ("start", "center", "end"), sortable, sort_value(item), cell(item, emphasized) }`), `items` (required; array or signal; items are tables keyed by column `key`), `key(item)` (default `item.key`, `id` or `name`), `value` (state of the selected keys, a set `{ [key] = true }`), `multiple`, `sort` (state `{ key, ascending }`), `alternating`, `max_height` (320), `on_sort(sort)`, `on_activate(item)`, `window`. Ctrl-click toggles a row and Shift-click extends, with `multiple`, `name` |
 | `outline(id, opts)` | The same, for items with a `children` array. Adds `expanded` (state set of open keys); Left collapses or goes to the parent, Right expands or goes to the first child |
 
-### tab_view.lua (`tab_view`)
+#### views/tab_view.lua (`tab_view`)
 
 | Function | opts |
 | :--- | :--- |
 | `tab_view(id, opts)` | `tabs` (required; `{ name, label, icon, content }`), `value` (state of the tab name; default first), `size`, `height` (minimum box height), `window`, `on_change(name)` |
 
-### scroll_view.lua (`scroll_view`)
+#### views/scroll_view.lua (`scroll_view`)
 
 A scrolling area that fills its parent, with the native overlay scroller: a 6 px knob at the trailing edge, shown while scrolling.
 
@@ -272,7 +332,11 @@ A scrolling area that fills its parent, with the native overlay scroller: a 6 px
 | :--- | :--- |
 | `scroll_view(id, opts)` | `child` (the content), `scroll` (a `scroll(name)` signal; default its own), `props` (extra fields for the scrolling column: `padding`, `id`, ...) |
 
-### Overlays (`menu.lua`, `popover.lua`, `alert.lua`, `tooltip.lua`, `notification.lua`; `glass.overlay`)
+### Overlays (`overlays/`)
+
+Layers opened over a window or panel.
+
+#### overlays/menu.lua, popover.lua, alert.lua, tooltip.lua, notification.lua; overlay.lua (`glass.overlay`)
 
 Layers float over a host: an `app_window` (by id) or a panel. Each opener takes `window` to pick the host (default `core.window`). One menu, popover, alert, sheet and banner is open at a time; a new one replaces it.
 
@@ -304,44 +368,3 @@ return { bar, glass.overlay.popup("bar") }
 | `bounds(host)` | The `geometry` signal of host `host`'s root |
 | `popup(parent)` | The panel surface above |
 | `layer(id, build, handlers?)`, `open(id, data, host)` | Register and show a custom layer; `handlers.escape()`, `handlers.key(key)` |
-
-### image_well.lua (`image_well`)
-
-The kit's 28 px well: `source` (image path), `size`, `fit` (`"contain"` default), `on_click` (makes it focusable), `label`.
-
-### desktop.lua (`menu_bar`, `dock`)
-
-Desktop chrome for a shell: put them in a `panel` and return `glass.overlay.popup(<panel id>)` beside it.
-
-| Function | opts |
-| :--- | :--- |
-| `menu_bar(id, opts)` | `menus` (`{ title?, icon?, bold?, items }`; a click opens one, moving along the bar switches while one is open), `trailing` (status nodes), `ink` (title colour; default white), `window` |
-| `dock(id, opts)` | `items` (`{ label?, icon?, color? (a `theme.SYSTEM` name), image?, running?, on_click? }` or `{ separator = true }`; labels show as tooltips), `window` |
-
-### material.lua (`glass.material`)
-
-| Name | Meaning |
-| :--- | :--- |
-| `glass(style, props, opts?)` | Spreads `style` (name or signal) onto `props` (`background`, `shadows`, `effect`, `behind_blur`, `corner_smoothing`), following light and dark. `opts.tint`: colour or signal, for `small_tinted`; `opts.shadows`: signal of a shadow list put on top (e.g. a focus ring) |
-| `vibrant(props)` | Sets `blend` so `vibrant_*` colours take the glass's tone; returns `props` |
-| `LENS` | Path of `lens.frag`; default `<config>/glass/lens.frag`. Set it if `glass/` is not in the config root |
-| `STYLES` | Style table. Names: `small`, `small_inactive`, `small_tinted`, `knob`, `large`, `menu`, `notification`, `sidebar`, `sidebar_inactive`, `tooltip`, and the materials `ultra_thick`, `thick`, `regular`, `thin`, `ultra_thin`. `small`, `knob` and `large` refract through the lens |
-
-### theme.lua (`glass.theme`)
-
-| Name | Meaning |
-| :--- | :--- |
-| `appearance` | State: `"system"` (default; follows `mantle.appearance`), `"light"` or `"dark"` |
-| `dark` | Signal: whether the colours are dark now |
-| `accent` | State: `"system"` (default; the desktop's accent, matched to the nearest name) or a name from `ACCENTS` |
-| `accent_name` | Signal: the accent in use |
-| `high_contrast`, `reduced_motion` | Signals from the desktop: Increase Contrast deepens translucent labels, fills and separators; Reduce Motion swaps springs for quick ones |
-| `ACCENTS` | `blue`, `purple`, `pink`, `red`, `orange`, `yellow`, `green`, `gray` |
-| `c.<role>` | Live colour signal of one role (`label`, `secondary_fill`, `vibrant_label`, `accent`, `on_accent`, `window_background`, system names such as `red`, ...); follows `dark` and `accent` |
-| `scheme` | Signal of the whole palette table, for `computed` |
-| `pick(flag, yes, no)` | Signal of role `yes` or `no` chosen by boolean signal `flag` |
-| `alpha(color, a)` | `"#RRGGBB[AA]"` at alpha 0..1 (plain string) |
-| `type` | Text styles `{ size, weight, line height, tracking }`: `large_title`, `title1..3`, `headline`, `body`, `callout`, `subheadline`, `footnote`, `caption1`, `caption2`, `control`, `control_small`, `control_mini`, `window_title`, `sidebar_title` |
-| `SIZES` | Per `size`: `height`, `radius`, `label` (type style), `inset`, `icon` |
-| `motion` | Springs and fade: `default`, `smooth`, `snappy`, `bouncy`, `press`, `fade`; for `animate` |
-| Others | `SYSTEM`, `vibrancy`, `CLEAR`, `CAPSULE`, `SMOOTHING`, `FONT`, `FONT_DISPLAY`, `WINDOW_RADIUS`, `CONTENT_INSET` |

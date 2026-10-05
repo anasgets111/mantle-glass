@@ -259,6 +259,14 @@ function M.glass(style, props, opts)
     return props
 end
 
+-- A glass style while `active`, its inactive variant (`<style>_inactive`) otherwise.
+---@param style string
+---@param active Signal<boolean>
+---@return Signal<string>
+function M.by_activity(style, active)
+    return active:map(function(on) return on and style or style .. "_inactive" end)
+end
+
 -- Vibrant foreground: `blend` that lets a `vibrant_*` colour take the glass's tone.
 ---@param props table
 ---@return table

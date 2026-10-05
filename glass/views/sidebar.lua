@@ -3,9 +3,9 @@
 local theme = require("glass.theme")
 local core = require("glass.core")
 local material = require("glass.material")
-local window = require("glass.window")
+local window = require("glass.chrome.window")
 local reveal = require("glass.internal.sidebar").reveal
-local scroll_view = require("glass.scroll_view").scroll_view
+local scroll_view = require("glass.views.scroll_view").scroll_view
 
 local c, FADE = theme.c, theme.motion.fade
 

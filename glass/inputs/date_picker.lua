@@ -4,9 +4,9 @@ local theme = require("glass.theme")
 local core = require("glass.core")
 local fields = require("glass.internal.fields")
 local tg = require("glass.internal.toggles")
-local popover = require("glass.popover")
-local stepper = require("glass.stepper").stepper
-local button = require("glass.button").button
+local popover = require("glass.overlays.popover")
+local stepper = require("glass.controls.stepper").stepper
+local button = require("glass.controls.button").button
 
 local c = theme.c
 
