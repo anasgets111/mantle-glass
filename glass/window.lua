@@ -67,7 +67,7 @@ function M.traffic_lights(opts)
 end
 
 -- One toolbar glyph button inside a group: 28 (or 20) square, a pill while held or selected.
-local function glyph_button(id, item, inner)
+local function glyph_button(id, item, inner, active)
     local props = { width = inner, height = inner, radius = inner / 2, accessible_name = item.label, on_click = item.on_click }
     core.focusable(id, props)
     local held = core.pressable(id, props)
@@ -77,7 +77,8 @@ local function glyph_button(id, item, inner)
     end)
     props.animate = { background = theme.motion.fade }
     props.children = {
-        icon(item.icon, c.vibrant_label, inner == 28 and 13 or 11, material.vibrant({ align_h = "center" })),
+        icon(item.icon, theme.pick(active, "vibrant_label", "vibrant_tertiary_label"), inner == 28 and 13 or 11,
+            material.vibrant({ align_h = "center" })),
     }
     return rect(core.shape(props))
 end
@@ -87,11 +88,12 @@ end
 function M.toolbar_group(id, opts)
     local xl = opts.size ~= "medium"
     local inner, pad = xl and 28 or 20, xl and 4 or 2
+    local active = M.active(opts.window)
     local kids = {}
     for i, item in ipairs(opts.items) do
-        kids[i] = glyph_button(id .. "_" .. i, item, inner)
+        kids[i] = glyph_button(id .. "_" .. i, item, inner, active)
     end
-    return row(material.glass(by_activity("small", M.active(opts.window)), {
+    return row(material.glass(by_activity("small", active), {
         height = inner + 2 * pad,
         align_v = "center",
         radius = theme.CAPSULE,
