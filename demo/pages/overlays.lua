@@ -42,6 +42,8 @@ local MENU = {
     { label = "Close", icon = "x", shortcut = "⌘W", on_click = say("Close") },
 }
 
+glass.bind_shortcuts(MENU)
+
 local function open_file_menu(anchor)
     MENU[6].checked = show_toolbar:get()
     glass.open_menu { anchor = anchor, items = MENU, id = "file" }
@@ -52,6 +54,30 @@ local menus = line {
     opener("menu_end", "Aligned to the end", function(anchor)
         glass.open_menu { anchor = anchor, items = MENU, width = 200, align = "end" }
     end),
+    labelled("last pick", glass.text(last, c.label, "body")),
+}
+
+local context = line {
+    glass.context_menu("area", {
+        items = function()
+            return {
+                { label = "Get Info", icon = "info", shortcut = "⌘I", on_click = say("Get Info") },
+                { label = "Rename", on_click = say("Rename") },
+                { separator = true },
+                { label = "Copy", icon = "copy", shortcut = "⌘C", on_click = say("Copy") },
+                { label = "Move to Trash", icon = "trash-2", on_click = say("Move to Trash") },
+            }
+        end,
+        child = rect(glass.shape {
+            width = 320,
+            height = 96,
+            radius = 12,
+            background = c.quaternary_fill,
+            border_width = 1,
+            border_color = c.separator,
+            children = { glass.text("Right-click anywhere in here", c.secondary_label, "body", { align_h = "center" }) },
+        }),
+    }),
     labelled("last pick", glass.text(last, c.label, "body")),
 }
 
@@ -169,7 +195,8 @@ local notifications = line {
 }
 
 return section.page {
-    section.section("Menus", "Icons, shortcuts, a checkmark, separators, a header, a disabled item and a submenu.", menus),
+    section.section("Menus", "Icons, shortcuts, a checkmark, separators, a header, a disabled item and a submenu. Its shortcuts work with Ctrl standing for ⌘: try Ctrl+N.", menus),
+    section.section("Context menu", "Opens at the pointer on a right click.", context),
     section.section("Pop-up and pull-down", "In context: a pop-up picks a value, a pull-down runs an action.", pop_in_context),
     section.section("Popovers", "Open on any edge of the control.", popovers),
     section.section("Alerts", "Two buttons side by side, then three stacked with a suppression checkbox.", alerts),

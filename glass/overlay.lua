@@ -9,7 +9,7 @@ local core = require("glass.core")
 local M = {}
 
 local shown = state("glass_layers", {})
-local builders, escapes, key_handlers = {}, {}, {}
+local builders, escapes, key_handlers, fallbacks = {}, {}, {}, {}
 -- A reload rebuilds the builders and the data they close over, so layers left open by the last
 -- generation close instead of building from stale data.
 if #(shown:get() or {}) > 0 then
@@ -136,7 +136,23 @@ end
 function M.key(host, key)
     local top = top_of(host)
     local handle = top and key_handlers[top.id]
-    return handle and handle(key) or false
+    if handle and handle(key) then
+        return true
+    end
+    for _, fallback in ipairs(top and {} or fallbacks[host] or {}) do
+        if fallback(key) then
+            return true
+        end
+    end
+    return false
+end
+
+-- `fn(key)` sees `host`'s keys that no control or open layer took, e.g. menu shortcuts.
+---@param host string
+---@param fn fun(key: KeyPress): boolean?
+function M.on_key(host, fn)
+    fallbacks[host] = fallbacks[host] or {}
+    table.insert(fallbacks[host], fn)
 end
 
 local function stack(host, base)

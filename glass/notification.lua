@@ -47,7 +47,7 @@ overlay.layer("glass_notify", function(data)
             -- not in the kit: slides in from the right edge
             animate = {
                 opacity = { duration = 150, from = 0 },
-                translate = { spring = theme.motion.snappy.spring, from = { x = BANNER.width + BANNER.margin, y = 0 } },
+                translate = theme.motion_with("snappy", { from = { x = BANNER.width + BANNER.margin, y = 0 } }),
             },
             accessible_name = data.title,
             on_click = function() overlay.close("glass_notify") end,

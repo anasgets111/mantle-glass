@@ -4,6 +4,7 @@ local theme = require("glass.theme")
 local core = require("glass.core")
 local material = require("glass.material")
 local overlay = require("glass.overlay")
+local sig = require("glass.internal.toggles").sig
 
 local c, CLEAR = theme.c, theme.CLEAR
 local merge, text, icon = core.merge, core.text, core.icon
@@ -11,19 +12,29 @@ local merge, text, icon = core.merge, core.text, core.icon
 local M = {}
 
 M.active = core.active
+local ON = theme.dark:map(function() return true end)
 
 -- A glass style while `active`, its inactive variant otherwise.
 local function by_activity(style, active)
     return active:map(function(on) return on and style or style .. "_inactive" end)
 end
 
--- Chrome per toolbar style: bar height, traffic-light origin, toolbar item size.
+-- Chrome per toolbar style: bar height, traffic-light origin, toolbar item size, the sidebar
+-- toggle (size, y in the toolbar, y in the sidebar) and where the sidebar's list starts.
+-- not in the kit: the toggle's y in the titlebar style (centred).
 local CHROME = {
-    titlebar = { height = 33, lights = { 9, 9.5 } },
-    compact = { height = 40, lights = { 13, 13 }, item = 24 },
-    unified = { height = 52, lights = { 18, 19 }, item = 36 },
+    titlebar = { height = 33, lights = { 9, 9.5 }, toggle = { 24, 4.5, 4.5 } },
+    compact = { height = 40, lights = { 13, 13 }, item = 24, toggle = { 24, 8, 8 } },
+    unified = { height = 52, lights = { 18, 19 }, item = 36, toggle = { 36, 8, 8 } },
+    expanded = { height = 77, bar = 33, lights = { 9, 9.5 }, item = 36, toggle = { 36, 33, 32 }, list = 76 },
 }
-local SIDEBAR_WIDTH = 256
+local UTILITY = { radius = 15, header = 24, tabs_header = 56, lights = { 8, 8 }, tab = { 44, 28 }, tab_top = 23 }
+-- Resizable panes (docs/spec/sidebars.md: 256). not in the kit: the drag ranges, as native apps.
+local PANE = {
+    sidebar = { default = 256, min = 180, max = 400 },
+    inspector = { default = 256, min = 200, max = 400 },
+}
+local GRAB = 6
 
 -- Window drop shadows (docs/spec/foundations.md 3.1): a wide ambient one and a 1 px rim. Dark without
 -- a sidebar uses the tighter one while active; every inactive window uses it at half strength.
@@ -36,40 +47,47 @@ local SHADOWS = {
 -- The band `geometry_inset` adds around the frame for the widest shadow: its blur radius past the
 -- frame, less the y offset above and plus it below.
 local BAND = { left = 100, right = 100, top = 64, bottom = 136 }
+local UTILITY_BAND = { left = 33, right = 33, top = 17, bottom = 49 }
+-- Utility panels: light has the one soft shadow; dark takes `active_tight` and `inactive`.
+SHADOWS.utility = { { color = "#0000004C", offset = { x = 0, y = 5 }, blur = 20 } }
 
 -- The band per side: none on a tiled side, none at all maximised or fullscreen.
-local function band(s)
+local function band(s, b)
     if s.maximized or s.fullscreen then
         return 0
     end
     local t = s.tiled
     return {
-        left = t.left and 0 or BAND.left,
-        right = t.right and 0 or BAND.right,
-        top = t.top and 0 or BAND.top,
-        bottom = t.bottom and 0 or BAND.bottom,
+        left = t.left and 0 or b.left,
+        right = t.right and 0 or b.right,
+        top = t.top and 0 or b.top,
+        bottom = t.bottom and 0 or b.bottom,
     }
 end
 
 -- Close, minimise, zoom: 14 px dots on a 23 px pitch, grey while the window is inactive. Hovering
--- the group colours them and shows their glyphs (not in the kit; as native apps draw them).
+-- the group colours them and shows their glyphs (not in the kit; as native apps draw them). A utility
+-- panel's are 10 px on a 17 px pitch.
 ---@class glass.TrafficLightsOpts
 ---@field on_close? fun()
 ---@field window? string
+---@field kind? "window"|"utility"
+---@field active? Signal<boolean> Overrides the window's focus, for an inline preview.
 ---@field [string] "no such property"
 
 ---@param opts? glass.TrafficLightsOpts
 ---@return Node
 function M.traffic_lights(opts)
     opts = opts or {}
-    local active = M.active(opts.window)
+    local utility = opts.kind == "utility"
+    local active = opts.active or M.active(opts.window)
     local over = hover("glass_lights_" .. (opts.window or "app"))
     local lit = computed({ active, over }, function(on, h) return on or h end)
     local function dot(role, glyph, run, label)
         return rect(core.shape {
-            width = 14,
-            height = 14,
-            radius = 7,
+            width = utility and 10 or 14,
+            height = utility and 10 or 14,
+            radius = utility and 5 or 7,
             background = computed({ lit, theme.scheme }, function(on, p) return on and p[role] or p.traffic_inactive end),
             shadows = { { color = "#00000073", spread = 0.5, inset = true } },
             accessible_name = label,
@@ -78,7 +96,7 @@ function M.traffic_lights(opts)
             on_click = run,
             animate = { background = theme.motion.fade },
             children = {
-                icon(glyph, "#00000099", 7, {
+                icon(glyph, "#00000099", utility and 5 or 7, {
                     align_h = "center",
                     opacity = over:map(function(h) return h and 1 or 0 end),
                 }),
@@ -87,7 +105,7 @@ function M.traffic_lights(opts)
     end
     -- ponytail: minimise and zoom need `toplevel(id):minimize()` / `:maximize()` (mantle-27).
     return row {
-        spacing = 9,
+        spacing = utility and 7 or 9,
         align_v = "center",
         hover = over,
         children = {
@@ -99,8 +117,20 @@ function M.traffic_lights(opts)
 end
 
 -- One toolbar glyph button inside a group: 28 (or 20) square, a pill while held or selected.
-local function glyph_button(id, item, inner, active)
-    local props = { width = inner, height = inner, radius = inner / 2, accessible_name = item.label, on_click = item.on_click }
+local function glyph_button(id, item, inner, active, wide)
+    local off = sig(item.disabled or false)
+    local props = {
+        width = wide or inner,
+        height = inner,
+        radius = inner / 2,
+        align_v = "center",
+        accessible_name = item.label,
+        on_click = function()
+            if item.on_click and not off:get() then
+                item.on_click()
+            end
+        end,
+    }
     core.focusable(id, props)
     local held = core.pressable(id, props)
     local selected = type(item.selected) == "userdata" and item.selected or theme.dark:map(function() return item.selected == true end)
@@ -109,7 +139,7 @@ local function glyph_button(id, item, inner, active)
     end)
     props.animate = { background = theme.motion.fade }
     props.children = {
-        icon(item.icon, theme.pick(active, "vibrant_label", "vibrant_tertiary_label"), inner == 28 and 13 or 11,
+        icon(item.icon, theme.pick(computed({ active, off }, function(on, d) return on and not d end), "vibrant_label", "vibrant_tertiary_label"), inner == 28 and 13 or 11,
             material.vibrant({ align_h = "center" })),
     }
     return rect(core.shape(props))
@@ -121,12 +151,14 @@ end
 ---@field label? string
 ---@field on_click? fun()
 ---@field selected? boolean|Signal<boolean>
+---@field disabled? boolean|Signal<boolean>
 ---@field [string] "no such property"
 
 ---@class glass.ToolbarGroupOpts
 ---@field items glass.ToolbarItem[]
 ---@field size? "xl"|"medium" "xl" 36 high (default), "medium" 24.
 ---@field window? string The id whose focus it follows.
+---@field active? Signal<boolean> Overrides the window's focus, for an inline preview.
 ---@field [string] "no such property"
 
 ---@param id string
@@ -135,7 +167,7 @@ end
 function M.toolbar_group(id, opts)
     local xl = opts.size ~= "medium"
     local inner, pad = xl and 28 or 20, xl and 4 or 2
-    local active = M.active(opts.window)
+    local active = opts.active or M.active(opts.window)
     local kids = {}
     for i, item in ipairs(opts.items) do
         kids[i] = glyph_button(id .. "_" .. i, item, inner, active)
@@ -154,17 +186,61 @@ end
 ---@class glass.ToolbarButtonOpts: glass.ToolbarItem
 ---@field size? "xl"|"medium"
 ---@field window? string
+---@field active? Signal<boolean>
 ---@field [string] "no such property"
 
 ---@param id string
 ---@param opts glass.ToolbarButtonOpts
 ---@return Node
 function M.toolbar_button(id, opts)
-    return M.toolbar_group(id, { size = opts.size, window = opts.window, items = { opts } })
+    return M.toolbar_group(id, { size = opts.size, window = opts.window, active = opts.active, items = { opts } })
 end
 
-local function title_block(props)
-    local title_color = theme.pick(M.active(props.id), "vibrant_label", "vibrant_tertiary_label")
+-- Back and forward in one glass capsule: 73x36 (two 20 px buttons around a 3x22 separator), or
+-- 55x24 medium (24x20 buttons around a 3x16 separator).
+---@class glass.ToolbarNavigationOpts
+---@field can_back? boolean|Signal<boolean> Default true.
+---@field can_forward? boolean|Signal<boolean> Default true.
+---@field on_back? fun()
+---@field on_forward? fun()
+---@field size? "xl"|"medium" Default "xl".
+---@field window? string
+---@field active? Signal<boolean>
+---@field [string] "no such property"
+
+---@param id string
+---@param opts? glass.ToolbarNavigationOpts
+---@return Node
+function M.toolbar_navigation(id, opts)
+    opts = opts or {}
+    local active = opts.active or M.active(opts.window)
+    local medium = opts.size == "medium"
+    local function button(name, glyph, label, can, run)
+        local item = { icon = glyph, label = label, on_click = run, disabled = sig(can == nil or can):map(function(on) return not on end) }
+        return glyph_button(id .. "_" .. name, item, 20, active, medium and 24 or nil)
+    end
+    return row(material.glass(by_activity("small", active), {
+        width = medium and 55 or 73,
+        height = medium and 24 or 36,
+        align_v = "center",
+        radius = theme.CAPSULE,
+        padding = medium and 2 or { left = 9.5, right = 9.5 },
+        spacing = medium and 0 or 5.5,
+        children = {
+            button("back", "chevron-left", "Back", opts.can_back, opts.on_back),
+            rect {
+                width = 3,
+                height = medium and 16 or 22,
+                align_v = "center",
+                children = { rect(material.vibrant({ width = 1, height = "fill", align_h = "center", background = c.vibrant_tertiary_fill })) },
+            },
+            button("forward", "chevron-right", "Forward", opts.can_forward, opts.on_forward),
+        },
+    }))
+end
+
+local function title_block(props, active)
+    local title_color = theme.pick(active, "vibrant_label", "vibrant_tertiary_label")
     local kids = { text(props.title, title_color, props.sidebar and "sidebar_title" or "window_title", material.vibrant({})) }
     if props.subtitle then
         kids[2] = text(props.subtitle, c.vibrant_tertiary_label, "control_small", material.vibrant({}))
@@ -174,11 +250,12 @@ end
 
 -- A press on empty chrome moves the window; a right press opens the compositor's window menu.
 -- Drag areas sit behind the chrome's controls, never around them, so a control's press stays its own.
+-- An inline preview (no `id`) has none.
 local function drag_area(id)
     return rect {
         width = "fill",
         height = "fill",
-        on_press = function(_, button)
+        on_press = id and function(_, button)
             if button == "left" then
                 toplevel(id):move()
             elseif button == "right" then
@@ -212,9 +289,13 @@ local function resize_grips(id)
     }
 end
 
+-- The soft edge's blur, faded out top to bottom. The kit's r100 is past what a crossfade keeps
+-- legible, so it is less (not in the kit).
+local SOFT_BLUR = 20
+local SOFT_MASK = { gradient = "linear", angle = 180, stops = { { 0, "#FFFFFFFF" }, { 1, "#FFFFFF00" } } }
+
 -- The band under the toolbar (docs/spec/foundations.md 2.5): "soft" fades the window's colour out,
 -- "hard" is the window's colour over a blur, with a hairline.
--- ponytail: soft also blurs under its fade (r100); a masked backdrop blur sees nothing (engine gap).
 local function scroll_edge(kind, height)
     if kind == "hard" then
         return rect {
@@ -234,20 +315,359 @@ local function scroll_edge(kind, height)
         background = c.window_background:map(function(bg)
             return { gradient = "linear", stops = { { 0, theme.alpha(bg, 0.6) }, { 1, theme.alpha(bg, 0) } } }
         end),
+        effect = { backdrop = { blur = SOFT_BLUR, mask = SOFT_MASK } },
     }
 end
 
-local CHROME_PROPS = { subtitle = true, toolbar = true, leading = true, trailing = true, scroll_edge = true, sidebar = true, child = true }
 
--- An app window in Liquid Glass chrome: any `window` field plus the chrome fields below.
----@class glass.AppWindowProps: WindowProps
+-- The sidebar toggle: 36 px in the expanded and unified toolbars, 24 px in compact.
+---@class glass.SidebarToggleOpts
+---@field shown StateSignal<boolean>
+---@field size? "xl"|"medium"
+---@field window? string
+---@field active? Signal<boolean>
+---@field [string] "no such property"
+
+---@param id string
+---@param opts glass.SidebarToggleOpts
+---@return Node
+function M.sidebar_toggle(id, opts)
+    return M.toolbar_button(id, {
+        icon = "panel-left",
+        label = "Toggle sidebar",
+        size = opts.size,
+        window = opts.window,
+        active = opts.active,
+        on_click = function() opts.shown:set(not opts.shown:get()) end,
+    })
+end
+
+-- A side pane of glass: its box eases to its width (or to nothing) and the glass slides with it.
+-- A drag on the divider resizes without the ease.
+local function pane(p)
+    local ease = computed({ p.dragging, theme.motion.smooth }, function(d, m) return d and {} or { width = m, translate = m } end)
+    local away = p.right and 1 or -1
+    return rect {
+        height = "fill",
+        clip = "box",
+        width = computed({ p.shown, p.width }, function(on, px) return on and px or 0 end),
+        animate = ease,
+        children = {
+            column(material.glass(by_activity("sidebar", p.active), {
+                width = p.width,
+                height = "fill",
+                align_h = p.right and "end" or "start",
+                translate = computed({ p.shown, p.width }, function(on, px) return { x = on and 0 or away * px } end),
+                animate = ease,
+                children = p.children,
+            })),
+        },
+    }
+end
+
+-- A strip on a pane's edge that resizes it within its range: the width at the grab plus how far the
+-- pointer has gone since, in surface coordinates.
+local function divider(range, width, shown, dragging, right)
+    local grab, from = 0, 0
+    return rect {
+        width = GRAB,
+        height = "fill",
+        align_h = right and "end" or "start",
+        cursor = "ew-resize",
+        visible = shown,
+        on_drag = function(r, pointer, phase)
+            local x = r.x + pointer.x
+            if phase == "start" then
+                grab, from = x, width:get()
+                dragging:set(true)
+            elseif phase == "move" then
+                local next = from + (right and grab - x or x - grab)
+                width:set(math.max(range.min, math.min(range.max, next)))
+            else
+                dragging:set(false)
+            end
+        end,
+    }
+end
+
+-- Utility panel tabs: 44x28 buttons in a row, the selected one on small glass.
+local function utility_tabs(id, props, active)
+    local tab = props.tab or state("glass_win_" .. id .. "_tab", props.tabs[1].value or props.tabs[1].label)
+    local kids = {}
+    for i, item in ipairs(props.tabs) do
+        local key = item.value or item.label
+        local selected = tab:map(function(v) return v == key end)
+        local button = {
+            width = UTILITY.tab[1],
+            height = UTILITY.tab[2],
+            radius = theme.CAPSULE,
+            accessible_name = item.label,
+            on_click = function() tab:set(key) end,
+            children = {
+                rect(material.glass(by_activity("small", active), {
+                    width = "fill",
+                    height = "fill",
+                    radius = theme.CAPSULE,
+                    hittable = false,
+                    opacity = selected:map(function(on) return on and 1 or 0 end),
+                    animate = { opacity = theme.motion.fade },
+                })),
+                icon(item.icon, theme.pick(computed({ selected, active }, function(s, a) return s and a end), "vibrant_accent", "vibrant_secondary_label"), 16,
+                    material.vibrant({ align_h = "center" })),
+            },
+        }
+        core.focusable("glass_win_" .. id .. "_tab_" .. i, button)
+        kids[i] = rect(core.shape(button))
+    end
+    return row { height = UTILITY.tab[2], margin = { top = UTILITY.tab_top }, align_h = "center", children = kids }
+end
+
+-- The body of a utility panel: a 24 px titlebar, or a 56 px toolbar with tabs, over the content.
+local function utility_body(props, active, lights)
+    local id = props.id
+    local tabs = props.tabs
+    local head = {
+        rect {
+            width = "fill",
+            height = UTILITY.header,
+            children = {
+                text(props.title, theme.pick(active, "vibrant_label", "vibrant_tertiary_label"), "control_small",
+                    material.vibrant({ align_h = "center", letter_spacing = 0 })),
+            },
+        },
+    }
+    if tabs then
+        head[2] = utility_tabs(id, props, active)
+    end
+    return rect {
+        width = "fill",
+        height = "fill",
+        background = c.window_background,
+        children = {
+            column {
+                width = "fill",
+                height = "fill",
+                children = {
+                    rect {
+                        width = "fill",
+                        height = tabs and UTILITY.tabs_header or UTILITY.header,
+                        border_width = tabs and { bottom = 1 } or nil,
+                        border_color = tabs and { bottom = c.chrome_border } or nil,
+                        children = { drag_area(not props.preview and id or nil), table.unpack(head) },
+                    },
+                    rect { width = "fill", height = "fill", children = { props.child } },
+                },
+            },
+            rect { margin = { left = UTILITY.lights[1], top = UTILITY.lights[2] }, children = { lights } },
+        },
+    }
+end
+
+local CHROME_PROPS = {
+    subtitle = true, toolbar = true, leading = true, trailing = true, scroll_edge = true, sidebar = true, child = true,
+    sidebar_shown = true, inspector = true, inspector_shown = true, inspector_width = true, kind = true, tabs = true,
+    tab = true, preview = true, active = true,
+}
+
+-- The chrome fields, shared by `app_window` and the inline `window_frame`.
+---@class glass.WindowFrameProps
+---@field id string Names the window and the state of its panes; unique per frame.
+---@field title? string|Signal<string>
 ---@field subtitle? string|Signal<string>
----@field toolbar? "unified"|"compact"|"titlebar" Default "unified".
----@field leading? Node[] Toolbar nodes left of the title.
+---@field toolbar? "unified"|"compact"|"titlebar"|"expanded" Default "unified"; "expanded" is a 33 titlebar over a 44 toolbar row.
+---@field kind? "window"|"utility" Default "window"; "utility" is a 15 px panel with 10 px lights and no toolbar styles.
+---@field leading? Node[] Toolbar nodes left of the title (the toolbar row's left end when expanded).
 ---@field trailing? Node[] Toolbar nodes right of the title.
 ---@field scroll_edge? "soft"|"hard" Default "soft" fade; "hard" is a blurred band with a hairline.
----@field sidebar? Node The 256 px glass pane.
+---@field sidebar? Node The glass pane at the left, 256 px by default; its edge drags between 180 and 400.
+---@field sidebar_shown? StateSignal<boolean> Default its own, shown. Collapsing slides the pane away and the traffic lights and a toggle join the toolbar.
+---@field inspector? Node The glass pane at the right (not in the kit: mirrors the sidebar).
+---@field inspector_shown? StateSignal<boolean> Default its own, shown.
+---@field inspector_width? number Opening width, default 256; its edge drags between 200 and 400.
+---@field tabs? { icon: string, label: string, value?: string }[] A utility panel's toolbar with tabs.
+---@field tab? StateSignal<string> The selected tab's value (else label); default the first.
 ---@field child? Node The content, which scrolls under the floating toolbar.
+---@field on_close? fun()
+---@field preview? boolean Inline preview: no window behind it, so no drag, menu or focus; looks active unless `active` says otherwise.
+---@field active? boolean|Signal<boolean> Overrides the window's focus.
+
+-- The framed window `app_window` puts in its surface: chrome, panes, content, rounded and shadowed.
+-- It needs no window, so it also draws inline as a preview (`preview = true`).
+---@param props glass.WindowFrameProps
+---@return Node
+function M.window_frame(props)
+    local id, preview = props.id, props.preview
+    local utility = props.kind == "utility"
+    local active = props.active ~= nil and sig(props.active) or (preview and ON or M.active(id))
+    local lights = M.traffic_lights({ on_close = props.on_close, window = id, active = active, kind = props.kind })
+    local has_sidebar = props.sidebar ~= nil and not utility
+    local has_inspector = props.inspector ~= nil and not utility
+    local grab_id = not preview and id or nil
+    local body
+    if utility then
+        body = utility_body(props, active, lights)
+    else
+        local style = CHROME[props.toolbar or "unified"]
+        local expanded = style.bar ~= nil
+        local shown = props.sidebar_shown or state("glass_win_" .. id .. "_sidebar", true)
+        local lights_end = style.lights[1] + 68 + 12
+        local tw = style.toggle[1] + 8
+        local size = style.toggle[1] == 24 and "medium" or "xl"
+        local function toggle(name)
+            return M.sidebar_toggle("glass_win_" .. id .. "_" .. name, { shown = shown, size = size, active = active })
+        end
+        -- The first toolbar row's left padding: past the lights and toggle while the sidebar is away.
+        local function inset(first, extra)
+            if not has_sidebar then
+                return { left = first, right = 8 }
+            end
+            return shown:map(function(on) return { left = on and 8 or first + extra, right = 8 } end)
+        end
+        local function items(first, last)
+            local list = {}
+            for _, node in ipairs(first) do list[#list + 1] = node end
+            for _, node in ipairs(last) do list[#list + 1] = node end
+            return list
+        end
+        local title = title_block(props, active)
+        local bar
+        if expanded then
+            local lead = items({}, props.leading or {})
+            lead[#lead + 1] = rect { width = "fill" }
+            bar = column {
+                width = "fill",
+                height = style.height,
+                children = {
+                    row { width = "fill", height = style.bar, padding = inset(lights_end, 0), animate = { padding = theme.motion.smooth }, children = { title } },
+                    row {
+                        width = "fill",
+                        height = style.height - style.bar,
+                        align_v = "start",
+                        spacing = 8,
+                        padding = inset(8, tw),
+                        animate = { padding = theme.motion.smooth },
+                        children = items(lead, props.trailing or {}),
+                    },
+                },
+            }
+        else
+            local lead = items(props.leading or {}, { title })
+            lead[#lead + 1] = rect { width = "fill" }
+            bar = row {
+                width = "fill",
+                height = style.height,
+                spacing = 8,
+                padding = inset(lights_end, tw),
+                animate = { padding = theme.motion.smooth },
+                children = items(lead, props.trailing or {}),
+            }
+        end
+        local sidebar_w = has_sidebar and state("glass_win_" .. id .. "_sidebar_w", PANE.sidebar.default) or nil
+        local sidebar_drag = has_sidebar and state("glass_win_" .. id .. "_sidebar_drag", false) or nil
+        local inspector_shown = has_inspector and (props.inspector_shown or state("glass_win_" .. id .. "_inspector", true)) or nil
+        local inspector_w = has_inspector and state("glass_win_" .. id .. "_inspector_w", props.inspector_width or PANE.inspector.default) or nil
+        local inspector_drag = has_inspector and state("glass_win_" .. id .. "_inspector_drag", false) or nil
+        -- The content runs under the toolbar; the scroll edge keeps the bar legible over it.
+        local content = rect {
+            width = "fill",
+            height = "fill",
+            background = c.window_background,
+            children = {
+                rect { width = "fill", height = "fill", padding = { top = style.height }, children = { props.child } },
+                scroll_edge(props.scroll_edge, style.height + 1),
+                rect { width = "fill", height = style.height, children = { drag_area(grab_id) } },
+                bar,
+            },
+        }
+        local panes = { content }
+        if has_sidebar then
+            table.insert(panes, 1, pane {
+                shown = shown,
+                width = sidebar_w,
+                dragging = sidebar_drag,
+                active = active,
+                children = {
+                    rect {
+                        width = "fill",
+                        height = style.list or style.height,
+                        children = {
+                            drag_area(grab_id),
+                            rect { align_h = "end", margin = { top = style.toggle[3], right = 8 }, children = { toggle("sidebar_toggle") } },
+                        },
+                    },
+                    props.sidebar,
+                },
+            })
+            content.children[#content.children + 1] = rect {
+                margin = { left = expanded and 8 or lights_end, top = style.toggle[2] },
+                visible = shown:map(function(on) return not on end),
+                opacity = shown:map(function(on) return on and 0 or 1 end),
+                animate = { opacity = theme.motion.fade },
+                children = { toggle("toolbar_toggle") },
+            }
+            content.children[#content.children + 1] = divider(PANE.sidebar, sidebar_w, shown, sidebar_drag, false)
+        end
+        if has_inspector then
+            panes[#panes + 1] = pane {
+                right = true,
+                shown = inspector_shown,
+                width = inspector_w,
+                dragging = inspector_drag,
+                active = active,
+                children = {
+                    rect { width = "fill", height = style.list or style.height, children = { drag_area(grab_id) } },
+                    props.inspector,
+                },
+            }
+            content.children[#content.children + 1] = divider(PANE.inspector, inspector_w, inspector_shown, inspector_drag, true)
+        end
+        body = rect {
+            width = "fill",
+            height = "fill",
+            children = {
+                row { width = "fill", height = "fill", children = panes },
+                rect { margin = { left = style.lights[1], top = style.lights[2] }, children = { lights } },
+            },
+        }
+    end
+    local window_state = not preview and toplevel(id):state() or nil
+    local R = utility and UTILITY.radius or theme.WINDOW_RADIUS
+    -- Square the corners the window shares with a screen edge or a neighbour, and all of them maximised.
+    return rect(core.shape {
+        width = "fill",
+        height = "fill",
+        radius = window_state and window_state:map(function(s)
+            local t = s.tiled
+            if s.maximized or s.fullscreen then
+                return 0
+            end
+            return {
+                top_left = (t.top or t.left) and 0 or R,
+                top_right = (t.top or t.right) and 0 or R,
+                bottom_right = (t.bottom or t.right) and 0 or R,
+                bottom_left = (t.bottom or t.left) and 0 or R,
+            }
+        end) or R,
+        clip = "rounded",
+        border_width = 1,
+        border_color = c.window_border,
+        shadows = computed({ active, theme.dark }, function(on, dark)
+            if utility and not dark then
+                return SHADOWS.utility
+            end
+            if not on then
+                return SHADOWS.inactive
+            end
+            return dark and (utility or not has_sidebar) and SHADOWS.active_tight or SHADOWS.active
+        end),
+        geometry = not preview and overlay.bounds(id) or nil,
+        children = preview and { body } or overlay.root(body, id),
+    })
+end
+
+-- An app window in Liquid Glass chrome: any `window` field plus the chrome fields of `window_frame`.
+---@class glass.AppWindowProps: WindowProps, glass.WindowFrameProps
+---@field preview? nil
 
 ---@param props glass.AppWindowProps
 ---@return Surface
@@ -258,95 +678,16 @@ function M.app_window(props)
             own[k] = v
         end
     end
-    local style = CHROME[props.toolbar or "unified"]
-    local has_sidebar = props.sidebar ~= nil
-    local lights = M.traffic_lights({ on_close = props.on_close, window = props.id })
-    local bar = {}
-    if props.leading then
-        for _, node in ipairs(props.leading) do bar[#bar + 1] = node end
-    end
-    bar[#bar + 1] = title_block(props)
-    bar[#bar + 1] = rect { width = "fill" }
-    if props.trailing then
-        for _, node in ipairs(props.trailing) do bar[#bar + 1] = node end
-    end
-    local toolbar = row {
-        width = "fill",
-        height = style.height,
-        spacing = 8,
-        padding = { left = has_sidebar and 8 or style.lights[1] + 68 + 12, right = 8 },
-        children = bar,
-    }
-    -- The content runs under the toolbar; the scroll edge keeps the bar legible over it.
-    local content = rect {
-        width = "fill",
-        height = "fill",
-        background = c.window_background,
-        children = {
-            rect { width = "fill", height = "fill", padding = { top = style.height }, children = { props.child } },
-            scroll_edge(props.scroll_edge, style.height + 1),
-            rect { width = "fill", height = style.height, children = { drag_area(props.id) } },
-            toolbar,
-        },
-    }
-    local panes = { content }
-    if has_sidebar then
-        table.insert(panes, 1, column(material.glass(by_activity("sidebar", M.active(props.id)), {
-            width = SIDEBAR_WIDTH,
-            height = "fill",
-            children = {
-                rect {
-                    width = "fill",
-                    height = style.height,
-                    children = { drag_area(props.id), row { height = style.height, padding = { left = style.lights[1] }, children = { lights } } },
-                },
-                props.sidebar,
-            },
-        })))
-    else
-        content.children[#content.children + 1] = rect {
-            margin = { left = style.lights[1], top = style.lights[2] },
-            children = { lights },
-        }
-    end
-    local window_state = toplevel(props.id):state()
-    -- Square the corners the window shares with a screen edge or a neighbour, and all of them maximised.
-    local frame = rect(core.shape {
-        width = "fill",
-        height = "fill",
-        radius = window_state:map(function(s)
-            local t, R = s.tiled, theme.WINDOW_RADIUS
-            if s.maximized or s.fullscreen then
-                return 0
-            end
-            return {
-                top_left = (t.top or t.left) and 0 or R,
-                top_right = (t.top or t.right) and 0 or R,
-                bottom_right = (t.bottom or t.right) and 0 or R,
-                bottom_left = (t.bottom or t.left) and 0 or R,
-            }
-        end),
-        clip = "rounded",
-        border_width = 1,
-        border_color = c.window_border,
-        shadows = computed({ M.active(props.id), theme.dark }, function(on, dark)
-            if not on then
-                return SHADOWS.inactive
-            end
-            return dark and not has_sidebar and SHADOWS.active_tight or SHADOWS.active
-        end),
-        geometry = overlay.bounds(props.id),
-        children = overlay.root(row { width = "fill", height = "fill", children = panes }, props.id),
-    })
-    local grips = resize_grips(props.id)
-    table.insert(grips, 1, frame)
-    local inset = window_state:map(band)
+    local id = props.id
+    local grips = resize_grips(id)
+    table.insert(grips, 1, M.window_frame(props))
+    local inset = toplevel(id):state():map(function(s) return band(s, props.kind == "utility" and UTILITY_BAND or BAND) end)
     return window(merge({
         background = CLEAR,
         decorations = "client",
         geometry_inset = inset,
-        on_escape = function() overlay.escape(props.id) end,
-        on_key = function(key) return overlay.key(props.id, key) end,
+        on_escape = function() overlay.escape(id) end,
+        on_key = function(key) return overlay.key(id, key) end,
         child = rect {
             width = "fill",
             height = "fill",
@@ -354,6 +695,13 @@ function M.app_window(props)
             children = { rect { width = "fill", height = "fill", children = grips } },
         },
     }, own))
+end
+
+-- A utility panel: `app_window` with `kind = "utility"` (280 wide in the kit).
+---@param props glass.AppWindowProps
+---@return Surface
+function M.utility_window(props)
+    return M.app_window(merge({ kind = "utility" }, props))
 end
 
 return M

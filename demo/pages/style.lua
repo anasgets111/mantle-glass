@@ -21,7 +21,7 @@ end
 local function colours(prefix)
     local cells = {}
     for i, name in ipairs(SYSTEM) do cells[i] = swatch(prefix .. name, name) end
-    return row { spacing = 12, children = cells }
+    return row { width = "fill", wrap = true, spacing = 12, line_spacing = 12, children = cells }
 end
 
 local system = column { spacing = 12, children = {
@@ -49,12 +49,12 @@ local roles = {}
 for i, group in ipairs(ROLES) do
     local cells = {}
     for j, role in ipairs(group[2]) do cells[j] = role_cell(role) end
-    roles[i] = column { spacing = 6, children = { glass.text(group[1], c.label, "headline"), row { spacing = 12, children = cells } } }
+    roles[i] = column { spacing = 6, children = { glass.text(group[1], c.label, "headline"), row { width = "fill", wrap = true, spacing = 12, line_spacing = 12, children = cells } } }
 end
 roles[#roles + 1] = rect { width = "fill", height = 1, background = c.separator }
 
 local function accent_dot(name)
-    local picked = theme.accent:map(function(a) return a == name end)
+    local picked = theme.accent_name:map(function(a) return a == name end)
     return rect(glass.shape {
         width = 24,
         height = 24,

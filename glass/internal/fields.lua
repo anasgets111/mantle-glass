@@ -53,6 +53,12 @@ function M.input(id, o)
         placeholder = o.placeholder,
         placeholder_color = role(2),
         caret = { color = theme.c.accent, width = 2, radius = 1 },
+        -- not in the kit: native fields tint a key window's selection with the accent, else greys it.
+        selection = {
+            background = computed({ core.active(o.window), theme.scheme, theme.dark }, function(on, p, dark)
+                return on and theme.alpha(p.accent, dark and 0.45 or 0.3) or p.inactive_selected_fill
+            end),
+        },
         -- native: Escape belongs to the window (it closes the sheet or popover); search fields clear.
         escape = o.escape or "pass",
         initial_text = value,

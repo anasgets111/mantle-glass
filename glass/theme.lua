@@ -2,11 +2,23 @@
 -- motion. `c.<role>` is a live signal of one role that follows `dark`.
 local M = {}
 
----@type StateSignal<boolean>
-M.dark = state("glass_dark", true)
+-- The app's choices; "system" follows the desktop's settings (`mantle.appearance`, the portal's).
+---@type StateSignal<"system"|"light"|"dark">
+M.appearance = state("glass_appearance", "system")
+---@type StateSignal<string> "system" or a `SYSTEM` colour name.
+M.accent = state("glass_accent", "system")
 
----@type StateSignal<string>
-M.accent = state("glass_accent", "blue")
+-- Whether the colours are dark: the choice, else the desktop's preference (none is light, as in native apps).
+---@type Signal<boolean>
+M.dark = computed({ M.appearance, mantle.appearance }, function(choice, sys)
+    if choice == "light" or choice == "dark" then
+        return choice == "dark"
+    end
+    return sys ~= nil and sys.color_scheme == "dark"
+end)
+-- Increase Contrast and Reduce Motion, from the desktop.
+M.high_contrast = mantle.appearance:map(function(sys) return sys ~= nil and sys.contrast == "high" end)
+M.reduced_motion = mantle.appearance:map(function(sys) return sys ~= nil and sys.reduced_motion == true end)
 
 -- System colours: { light, dark, light vibrant (plus-darker), dark vibrant (plus-lighter) }.
 M.SYSTEM = {
@@ -74,10 +86,43 @@ local ROLES = {
 }
 
 -- Every role and system colour for one appearance; the accent's own row gives `accent`.
-local function palette(dark, accent)
+local function rgb(hex)
+    return tonumber(hex:sub(2, 3), 16), tonumber(hex:sub(4, 5), 16), tonumber(hex:sub(6, 7), 16)
+end
+
+-- The accent `SYSTEM` name nearest the desktop's "#rrggbb" one; blue without one.
+local function nearest(hex)
+    if type(hex) ~= "string" or not hex:match("^#%x%x%x%x%x%x") then
+        return "blue"
+    end
+    local r, g, b = rgb(hex)
+    local best, best_d = "blue", math.huge
+    for _, name in ipairs(M.ACCENTS) do
+        local r2, g2, b2 = rgb(M.SYSTEM[name][1])
+        local d = (r - r2) ^ 2 + (g - g2) ^ 2 + (b - b2) ^ 2
+        if d < best_d then
+            best, best_d = name, d
+        end
+    end
+    return best
+end
+
+-- not in the kit: Increase Contrast; translucent labels, fills, separators and borders get 1.6x
+-- their alpha, as native apps deepen them.
+local function contrasted(role, color)
+    if #color ~= 9 or not (role:find("label") or role:find("fill") or role:find("separator") or role:find("border")) then
+        return color
+    end
+    return M.alpha(color, math.min(1, tonumber(color:sub(8, 9), 16) / 255 * 1.6))
+end
+
+local function palette(dark, accent, high)
     local p = {}
     for role, pair in pairs(ROLES) do
         p[role] = pair[dark and 2 or 1]
+        if high then
+            p[role] = contrasted(role, p[role])
+        end
     end
     for name, set in pairs(M.SYSTEM) do
         p[name] = set[dark and 2 or 1]
@@ -93,7 +138,19 @@ local function palette(dark, accent)
     return p
 end
 
-M.scheme = computed({ M.dark, M.accent }, function(dark, accent) return palette(dark ~= false, accent) end)
+-- The accent in use, as a `SYSTEM` name.
+---@type Signal<string>
+M.accent_name = computed({ M.accent, mantle.appearance }, function(choice, sys)
+    return M.SYSTEM[choice] and choice or nearest(sys and sys.accent)
+end)
+
+-- Built once per combination: a scheme change re-reads every role, so it must stay cheap.
+local palettes = {}
+M.scheme = computed({ M.dark, M.accent_name, M.high_contrast }, function(dark, accent, high)
+    local key = tostring(dark) .. accent .. tostring(high)
+    palettes[key] = palettes[key] or palette(dark, accent, high)
+    return palettes[key]
+end)
 
 M.c = setmetatable({}, {
     __index = function(roles, role)
@@ -159,8 +216,16 @@ M.CONTENT_INSET = 12
 
 -- SwiftUI's springs as engine springs: response r seconds and damping fraction z give
 -- stiffness (2 pi / r)^2 and damping 4 pi z / r.
+-- Reduce Motion swaps every spring for a quick critically damped one (not in the kit).
+local QUICK = { stiffness = 2500, damping = 100 }
 local function spring(response, fraction)
-    return { spring = { stiffness = (2 * math.pi / response) ^ 2, damping = 4 * math.pi * fraction / response } }
+    local own = { stiffness = (2 * math.pi / response) ^ 2, damping = 4 * math.pi * fraction / response }
+    return M.reduced_motion:map(function(reduced) return { spring = reduced and QUICK or own } end)
+end
+
+-- `motion` entry `name` with more fields, e.g. `from`, as one animate signal.
+function M.motion_with(name, extra)
+    return M.motion[name]:map(function(m) return { spring = m.spring, from = extra.from } end)
 end
 M.motion = {
     default = spring(0.55, 1),

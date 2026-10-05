@@ -165,6 +165,17 @@ M.STYLES = {
         light = { fills = { "F4F4F4" } },
         dark = { fills = { "2E2E2ED9" } },
     },
+    -- The Dock (docs/spec/overlays.md): glass r1, saturate 1, distortion 0.08, depth 0.9. Radius 15.
+    dock = {
+        lens = { 14, 16, 0.08 },
+        light = { blur = 1, saturate = 1, fills = { "4D4D4D4C luminosity", "1A1A1A1A +D", "FFFFFF14 lighten" } },
+        dark = { blur = 1, saturate = 1, fills = { "45454580 luminosity", "1A1A1A1A +D", "FFFFFF14 lighten" } },
+    },
+    -- The menu bar's open title: blur r30, saturate 1.05, distortion 0.6. Radius 13.
+    menu_bar_item = {
+        light = { blur = 30, saturate = 1.05, fills = { "FFFFFF33 +L" } },
+        dark = { blur = 30, saturate = 1.05, fills = { "FFFFFF33 +L" } },
+    },
     -- Tooltips. Square corners.
     tooltip = {
         light = { blur = 45, saturate = 1.8, fills = { "E7E7E7D9" }, drops = { "00000066 0 0 2 0", "00000033 0 2 8 0" } },

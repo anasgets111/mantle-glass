@@ -12,8 +12,12 @@ local PAGES = {
     { name = "toggles", label = "Toggles", icon = "toggle-right", page = "demo.pages.toggles" },
     { name = "sliders", label = "Sliders & Progress", icon = "sliders-horizontal", page = "demo.pages.sliders" },
     { name = "inputs", label = "Text Input", icon = "text-cursor-input", page = "demo.pages.inputs" },
+    { name = "pickers", label = "Pickers & Indicators", icon = "calendar", page = "demo.pages.pickers" },
     { name = "overlays", label = "Menus & Popovers", icon = "panel-top", page = "demo.pages.overlays" },
     { name = "lists", label = "Lists & Forms", icon = "list", page = "demo.pages.lists" },
+    { name = "tables", label = "Tables & Tabs", icon = "table", page = "demo.pages.tables" },
+    { name = "windows", label = "Windows & Toolbars", icon = "app-window", page = "demo.pages.windows" },
+    { name = "desktop", label = "Menu Bar & Dock", icon = "dock", page = "demo.pages.desktop" },
     { name = "materials", label = "Materials", icon = "layers", page = "demo.pages.materials" },
     { name = "style", label = "Colour & Type", icon = "palette", page = "demo.pages.style" },
 }
@@ -36,7 +40,7 @@ for name, node in pairs(BUILT) do
 end
 local body = page:map(function(name) return { VIEWS[name] } end)
 
-local function toggle_dark() theme.dark:set(not theme.dark:get()) end
+local function toggle_dark() theme.appearance:set(theme.dark:get() and "light" or "dark") end
 
 local function next_accent()
     local now = theme.accent:get()

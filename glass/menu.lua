@@ -301,7 +301,8 @@ end, {
 ---@field [string] "no such property"
 
 ---@class glass.MenuOpts
----@field anchor Signal<table> A `geometry(name)` signal; the menu opens under it.
+---@field anchor? Signal<table> A `geometry(name)` signal; the menu opens under it.
+---@field at? { x: number, y: number } A point in the host's coordinates instead, as a context menu opens at the pointer.
 ---@field items glass.MenuItem[]
 ---@field on_pick? fun(item: glass.MenuItem)
 ---@field width? number|"anchor" Default 244.
@@ -313,12 +314,110 @@ end, {
 ---@param opts glass.MenuOpts
 function M.open_menu(opts)
     spec = opts
+    if opts.at then
+        local at = { x = opts.at.x, y = opts.at.y - MENU.below, width = 0, height = 0 }
+        spec = core.merge(core.merge({}, opts), { anchor = never:map(function() return at end) })
+    end
     sel:set(0)
     sub:set(0)
     subsel:set(0)
     deep:set(false)
     owner:set(opts.id or "")
     overlay.open("glass_menu", nil, opts.window)
+end
+
+-- Wraps `opts.child` so a right click on it opens `opts.items` at the pointer.
+---@class glass.ContextMenuOpts
+---@field child Node
+---@field items glass.MenuItem[]|fun(): glass.MenuItem[] A function builds them at each opening.
+---@field on_pick? fun(item: glass.MenuItem)
+---@field window? string The window or panel it opens over; default `core.window`.
+---@field [string] "no such property"
+
+---@param id string
+---@param opts glass.ContextMenuOpts
+---@return Node
+function M.context_menu(id, opts)
+    return rect {
+        cursor = "default",
+        on_click = function(r, button, p)
+            if button ~= "right" then
+                return
+            end
+            M.open_menu({
+                at = { x = r.x + p.x, y = r.y + p.y },
+                items = type(opts.items) == "function" and opts.items() or opts.items --[[@as glass.MenuItem[] ]],
+                on_pick = opts.on_pick,
+                id = "context_" .. id,
+                window = opts.window,
+            })
+        end,
+        children = { opts.child },
+    }
+end
+
+-- native menu glyphs and the modifier each one means here: ⌘ is Ctrl, as Super belongs to the
+-- compositor. Key glyphs name keysyms.
+M.MODIFIERS = { ["⌘"] = "ctrl", ["⌃"] = "ctrl", ["⌥"] = "alt", ["⇧"] = "shift" }
+local KEYS = { ["⏎"] = "Return", ["↩"] = "Return", ["⌫"] = "BackSpace", ["⌦"] = "Delete", ["⎋"] = "Escape",
+    ["⇥"] = "Tab", ["←"] = "Left", ["→"] = "Right", ["↑"] = "Up", ["↓"] = "Down", ["Space"] = "space" }
+
+-- A shortcut string such as "⌘⇧N" as { mods = { ctrl = true, shift = true }, key = "n" }.
+local function parse(shortcut)
+    local mods, rest = {}, shortcut
+    while true do
+        local found
+        for glyph, mod in pairs(M.MODIFIERS) do
+            if rest:sub(1, #glyph) == glyph then
+                mods[mod], rest, found = true, rest:sub(#glyph + 1), true
+            end
+        end
+        if not found then
+            break
+        end
+    end
+    return { mods = mods, key = (KEYS[rest] or rest):lower() }
+end
+
+local function matches(sc, key)
+    for _, mod in ipairs({ "ctrl", "alt", "shift", "super" }) do
+        if (sc.mods[mod] or false) ~= key.modifiers[mod] then
+            return false
+        end
+    end
+    return key.name:lower() == sc.key
+end
+
+-- Makes `items`' shortcuts work while `window` has the keyboard and no menu or layer is open:
+-- the matching item runs as if picked. Bind the same items a menu shows, so both stay in step.
+---@param items glass.MenuItem[]
+---@param window? string Default `core.window`.
+function M.bind_shortcuts(items, window)
+    local bound = {}
+    local function collect(list)
+        for _, item in ipairs(list) do
+            if item.submenu then
+                collect(item.submenu)
+            elseif item.shortcut and selectable(item) then
+                bound[#bound + 1] = { sc = parse(item.shortcut), item = item }
+            end
+        end
+    end
+    collect(items)
+    overlay.on_key(assert(window or core.window, "glass: bind_shortcuts needs a window"), function(key)
+        if key["repeat"] then
+            return false
+        end
+        for _, b in ipairs(bound) do
+            if matches(b.sc, key) then
+                if b.item.on_click then
+                    b.item.on_click()
+                end
+                return true
+            end
+        end
+        return false
+    end)
 end
 
 -- A signal: true while the menu opened with `id` is showing.

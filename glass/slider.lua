@@ -65,7 +65,9 @@ end
 ---@field min? number Default 0.
 ---@field max? number Default 1.
 ---@field step? number
----@field width? number Default 140; the track is 20 px shorter.
+---@field width? number Default 140; the track is 20 px shorter. The length, also when `vertical`.
+---@field height? number With `vertical`, the length instead of `width`.
+---@field vertical? boolean Stands upright, the minimum at the bottom.
 ---@field neutral? number Centre-biased: the fill grows from this value.
 ---@field ticks? integer Evenly spaced count.
 ---@field snap? boolean Snap the value to the ticks.
@@ -81,16 +83,30 @@ function M.slider(id, opts)
     local s = SIZES[opts.size or "regular"]
     local n = tg.role(opts)
     local lo, hi = opts.min or 0, opts.max or 1
-    local W = opts.width or 140
+    local vert = opts.vertical
+    local W = (vert and opts.height or opts.width) or 140
+    -- A box `len` along the slider at `a` from its low end, `cross` across; `dims` is its size.
+    local function place(a, len, cross)
+        if vert then
+            return { x = cross, y = W - a - len }
+        end
+        return { x = a, y = cross }
+    end
+    local function dims(len, thick)
+        if vert then
+            return thick, len
+        end
+        return len, thick
+    end
     local track = W - 2 * INSET
     local ticks = opts.ticks
     local neutral = opts.neutral and (opts.neutral - lo) / (hi - lo)
     ---@type StateSignal<number>
     local value = opts.value or state("glass_slider_" .. id, opts.neutral or lo)
     local frac = value:map(function(v) return clamp01(((v or lo) - lo) / (hi - lo)) end)
-    local props = { width = W, height = s.h }
+    local props = { width = vert and s.h or W, height = vert and W or s.h }
     local held, disabled = draggable(id, opts, props, function(pointer)
-        local f = clamp01((pointer.x - INSET) / track)
+        local f = clamp01(((vert and W - pointer.y or pointer.x) - INSET) / track)
         if ticks and opts.snap then
             f = round(f * (ticks - 1)) / (ticks - 1)
         end
@@ -102,16 +118,18 @@ function M.slider(id, opts)
         if neutral then
             a, b = math.min(f, neutral), math.max(f, neutral)
         end
-        local left = neutral and f <= neutral
-        local right = neutral and f > neutral
+        local low = (neutral and f > neutral) and 0 or R
+        local high = (neutral and f <= neutral) and 0 or R
+        local w, h = dims((b - a) * track, s.th)
         return {
-            translate = { x = INSET + a * track, y = s.ty },
-            w = (b - a) * track,
-            radius = { top_left = not right and R or 0, bottom_left = not right and R or 0, top_right = not left and R or 0, bottom_right = not left and R or 0 },
+            translate = place(INSET + a * track, (b - a) * track, s.ty),
+            w = w,
+            h = h,
+            radius = vert and { top_left = high, top_right = high, bottom_left = low, bottom_right = low }
+                or { top_left = low, bottom_left = low, top_right = high, bottom_right = high },
         }
     end)
     -- A held slider follows the pointer exactly; otherwise changes ease.
-    local ease = function(extra) return held:map(function(h) return h and {} or extra end) end
 
     local active = core.active(opts.window)
     local fill_color = computed({ disabled, active, theme.dark, theme.scheme }, function(off, a, dark, p)
@@ -120,11 +138,12 @@ function M.slider(id, opts)
         end
         return off and p[dark and "quaternary_fill" or "quinary_fill"] or p[n("accent")]
     end)
+    local tw, th = dims(track, s.th)
     local children = {
         rect(vibrant(opts, core.shape {
-            translate = { x = INSET, y = s.ty },
-            width = track,
-            height = s.th,
+            translate = place(INSET, track, s.ty),
+            width = tw,
+            height = th,
             radius = theme.CAPSULE,
             hittable = false,
             background = c[n("fill")],
@@ -132,11 +151,11 @@ function M.slider(id, opts)
         rect(core.shape {
             translate = fill:map(function(f) return f.translate end),
             width = fill:map(function(f) return f.w end),
-            height = s.th,
+            height = fill:map(function(f) return f.h end),
             radius = fill:map(function(f) return f.radius end),
             hittable = false,
             background = fill_color,
-            animate = ease { translate = MOVE, width = MOVE, background = theme.motion.fade },
+            animate = computed({ held, MOVE }, function(h, m) return h and {} or { translate = m, width = m, height = m, background = theme.motion.fade } end),
             children = {
                 rect(core.shape {
                     width = "fill",
@@ -154,39 +173,42 @@ function M.slider(id, opts)
         return p[n(off and "quaternary_label" or "tertiary_label")]
     end)
     if neutral then
+        local mw, mh = dims(2, s.th)
         children[#children + 1] = rect(vibrant(opts, {
-            translate = { x = INSET + neutral * track - 1, y = s.ty },
-            width = 2,
-            height = s.th,
+            translate = place(INSET + neutral * track - 1, 2, s.ty),
+            width = mw,
+            height = mh,
             hittable = false,
             background = c.vibrant_tertiary_label,
         }))
     end
     for i = 0, (ticks or 0) - 1 do
         local mid = neutral and math.abs(i / (ticks - 1) - neutral) < 1e-6
+        local xw, xh = dims(2, mid and 4 or 2)
         children[#children + 1] = rect(vibrant(opts, core.shape {
             -- not in the kit: the 2 px ticks sit in the middle of the 4 px tick box
-            translate = { x = INSET + 1 + i * (track - 4) / (ticks - 1), y = s.tick + (mid and 0 or 1) },
-            width = 2,
-            height = mid and 4 or 2,
+            translate = place(INSET + 1 + i * (track - 4) / (ticks - 1), 2, s.tick + (mid and 0 or 1)),
+            width = xw,
+            height = xh,
             radius = 1,
             hittable = false,
             background = mid and computed({ disabled, theme.scheme }, function(off, p) return p[off and "quaternary_label" or "label"] end) or tick_color,
         }))
     end
     local kw, kh = ticks and s.tw or s.kw, ticks and s.tkh or s.kh
+    local kl, kt = dims(kw, kh) -- the knob's box; it is kw along the slider
     local radius = ticks and s.tkr or theme.CAPSULE
     local idle_fill = opts.on_glass and c.on_accent or c.knob
     local function shape(extra)
         return rect(core.shape(core.merge({ width = "fill", height = "fill", radius = radius, hittable = false }, extra)))
     end
     children[#children + 1] = rect {
-        width = kw,
-        height = kh,
+        width = kl,
+        height = kt,
         hittable = false,
-        translate = frac:map(function(f) return { x = INSET + f * track - kw / 2, y = s.ty + s.th / 2 - kh / 2 } end),
+        translate = frac:map(function(f) return place(INSET + f * track - kw / 2, kw, s.ty + s.th / 2 - kh / 2) end),
         scale = held:map(function(h) return h and GROW or 1 end),
-        animate = held:map(function(h) return h and { scale = GROW_SPRING } or { translate = MOVE, scale = GROW_SPRING } end),
+        animate = computed({ held, MOVE, GROW_SPRING }, function(h, m, g) return h and { scale = g } or { translate = m, scale = g } end),
         children = {
             shape {
                 background = idle_fill,
@@ -244,7 +266,7 @@ function M.circular_slider(id, opts)
             height = "fill",
             hittable = false,
             rotate = turn,
-            animate = held:map(function(h) return h and {} or { rotate = MOVE } end),
+            animate = computed({ held, MOVE }, function(h, m) return h and {} or { rotate = m } end),
             children = { rect(vibrant(opts, core.shape {
                 translate = { x = (D - s.gw) / 2, y = s.gy },
                 width = s.gw,

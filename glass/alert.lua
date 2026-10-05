@@ -121,7 +121,7 @@ overlay.layer("glass_alert", function()
             opacity = 1,
             scale = 1,
             -- not in the kit: alerts scale up a little as they appear
-            animate = { opacity = { duration = 150, from = 0 }, scale = { spring = theme.motion.snappy.spring, from = 1.06 } },
+            animate = { opacity = { duration = 150, from = 0 }, scale = theme.motion_with("snappy", { from = 1.06 }) },
             on_click = function() end,
             children = kids,
         })) },
@@ -192,7 +192,7 @@ overlay.layer("glass_sheet", function()
             opacity = 1,
             translate = { x = 0, y = 0 },
             -- not in the kit: sheets drop in from above
-            animate = { opacity = { duration = 150, from = 0 }, translate = { spring = theme.motion.smooth.spring, from = { x = 0, y = -24 } } },
+            animate = { opacity = { duration = 150, from = 0 }, translate = theme.motion_with("smooth", { from = { x = 0, y = -24 } }) },
             on_click = function() end,
             children = { content },
         }) },

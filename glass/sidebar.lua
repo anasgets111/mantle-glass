@@ -52,6 +52,7 @@ end
 ---@field size? "small"|"medium"|"large" Default "medium".
 ---@field on_select? fun(name: string)
 ---@field window? string
+---@field active? Signal<boolean> Overrides the window's focus, for an inline preview.
 ---@field [string] "no such property"
 
 ---@param id string
@@ -62,7 +63,7 @@ function M.sidebar(id, opts)
     local first = opts.sections[1].items[1].name
     ---@type StateSignal<string>
     local value = opts.value or state("glass_sidebar_" .. id, first)
-    local active = window.active(opts.window)
+    local active = opts.active or window.active(opts.window)
     local title_color = theme.pick(active, "vibrant_label", "vibrant_tertiary_label")
     local icon_color = theme.pick(active, "vibrant_accent", "vibrant_secondary_label")
     -- not in the kit: without the plus-lighter/darker blend a tertiary vibrant grey vanishes on the pane.
