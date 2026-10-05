@@ -77,10 +77,11 @@ function M.focus_ring(accent)
 end
 
 -- Swaps the engine's black and white outline on a Tab stop (a node with `on_click` and an
--- `accessible_name`) for the accent ring; `props` must not set `shadows`.
+-- `accessible_name`) for the accent ring, shown only for keyboard focus as native apps do; `props` must
+-- not set `shadows`.
 function M.focusable(name, props)
-    local on = focused("glass_focus_" .. name)
-    props.focused = on
+    local on = focus_visible("glass_focus_" .. name)
+    props.focus_visible = on
     props.focus_ring = false
     props.shadows = computed({ on, theme.scheme }, function(f, p) return f and M.focus_ring(p.accent) or {} end)
 end

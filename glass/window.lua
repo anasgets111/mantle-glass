@@ -36,6 +36,32 @@ local CHROME = {
 }
 local SIDEBAR_WIDTH = 256
 
+-- Window drop shadows (docs/spec/foundations.md 3.1): a wide ambient one and a 1 px rim. Dark without
+-- a sidebar uses the tighter one while active; every inactive window uses it at half strength.
+local RIM = { color = "#000000CC", blur = 1 }
+local SHADOWS = {
+    active = { { color = "#00000066", offset = { x = 0, y = 36 }, blur = 100 }, RIM },
+    active_tight = { { color = "#00000066", offset = { x = 0, y = 16 }, blur = 33 }, RIM },
+    inactive = { { color = "#00000033", offset = { x = 0, y = 16 }, blur = 32 }, RIM },
+}
+-- The band `geometry_inset` adds around the frame for the widest shadow: its blur radius past the
+-- frame, less the y offset above and plus it below.
+local BAND = { left = 100, right = 100, top = 64, bottom = 136 }
+
+-- The band per side: none on a tiled side, none at all maximised or fullscreen.
+local function band(s)
+    if s.maximized or s.fullscreen then
+        return 0
+    end
+    local t = s.tiled
+    return {
+        left = t.left and 0 or BAND.left,
+        right = t.right and 0 or BAND.right,
+        top = t.top and 0 or BAND.top,
+        bottom = t.bottom and 0 or BAND.bottom,
+    }
+end
+
 -- Close, minimise, zoom: 14 px dots on a 23 px pitch, grey while the window is inactive.
 function M.traffic_lights(opts)
     opts = opts or {}
@@ -239,16 +265,29 @@ function M.app_window(props)
         clip = "rounded",
         border_width = 1,
         border_color = c.window_border,
+        shadows = computed({ M.active(props.id), theme.dark }, function(on, dark)
+            if not on then
+                return SHADOWS.inactive
+            end
+            return dark and not has_sidebar and SHADOWS.active_tight or SHADOWS.active
+        end),
         children = overlay.root(row { width = "fill", height = "fill", children = panes }),
     })
     local grips = resize_grips(props.id)
     table.insert(grips, 1, frame)
+    local inset = window_state:map(band)
     return window(merge({
         background = CLEAR,
         decorations = "client",
+        geometry_inset = inset,
         on_escape = overlay.escape,
         on_key = overlay.key,
-        child = rect { width = "fill", height = "fill", children = grips },
+        child = rect {
+            width = "fill",
+            height = "fill",
+            padding = inset,
+            children = { rect { width = "fill", height = "fill", children = grips } },
+        },
     }, {
         id = props.id,
         title = props.title,

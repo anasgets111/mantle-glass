@@ -153,14 +153,14 @@ function M.control(id, o, content)
         end,
     }, o.props)
     local held = core.pressable(id, props)
-    local focus = focused("glass_focus_" .. id)
+    local focus = focus_visible("glass_focus_" .. id)
     local look = computed({ theme.scheme, theme.dark, held, disabled, M.signal(o.on or false) },
         function(p, dark, down, off, selected)
             local fill, label = M.look(o.kind, p, dark, o.on_glass, off and "disabled" or down and "held" or "idle", selected)
             return { fill = fill, label = label }
         end)
     props.background = look:map(function(l) return l.fill end)
-    props.focused = focus
+    props.focus_visible = focus
     props.shadows = computed({ focus, theme.scheme }, function(on, p) return on and core.focus_ring(p.accent) or {} end)
     props.children = content(look:map(function(l) return l.label end), disabled)
     return row(core.shape(props))

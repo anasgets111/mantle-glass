@@ -15,24 +15,28 @@ local POPOVER = {
     padding = 16, -- not in the kit: the kit's popovers are empty shells
 }
 
--- The arrow in its own frame: base along x from 0 to 46, apex at y 0, as bezier segments.
+-- The arrow in its own frame: base along x from 0 to 46 on the body's edge, apex 10.5 out at x 23,
+-- as the kit's bezier segments from base start to base end.
 local TIP = {
-    { "M", 0, 10.5 },
-    { "C", 8, 10.5, 12, 9, 16, 5.5 },
-    { "C", 20, 2, 21, 0, 23, 0 },
-    { "C", 25, 0, 26, 2, 30, 5.5 },
-    { "C", 34, 9, 38, 10.5, 46, 10.5 },
-    { "Z" },
+    { 0, 10.5 },
+    { 8, 10.5, 12, 9, 16, 5.5 },
+    { 20, 2, 21, 0, 23, 0 },
+    { 25, 0, 26, 2, 30, 5.5 },
+    { 34, 9, 38, 10.5, 46, 10.5 },
 }
 
--- `top` (#RRGGBBAA) laid over the opaque `base`.
-local function flat_over(top, base)
-    local a, out = tonumber(top:sub(8, 9), 16) / 255, "#"
-    for i = 2, 6, 2 do
-        local t, b = tonumber(top:sub(i, i + 1), 16), tonumber(base:sub(i, i + 1), 16)
-        out = out .. string.format("%02X", math.floor(t * a + b * (1 - a) + 0.5))
+-- A kit point (`kx` along the base, `ky` from the apex) on `side` of the body, centred on it. The
+-- contour runs clockwise, so the bottom and left tails run against the kit's x and mirror it.
+local function tip_point(side, kx, ky)
+    local h = POPOVER.arrow[2]
+    if side == "bottom" or side == "left" then
+        kx = POPOVER.arrow[1] - kx
     end
-    return out
+    local along = { from = "center", px = kx - POPOVER.arrow[1] / 2 }
+    if side == "top" then return { along, ky - h } end
+    if side == "bottom" then return { along, { from = "bottom", px = h - ky } } end
+    if side == "left" then return { ky - h, along } end
+    return { { from = "right", px = h - ky }, along }
 end
 
 ---@return table
@@ -42,44 +46,34 @@ local function margin_on(side, px)
     return m
 end
 
--- The arrow pointing at an anchor on `edge` of the popover ("top" means the anchor is above it).
-local function arrow(edge, margin)
-    local base, h = POPOVER.arrow[1], POPOVER.arrow[2]
-    local commands = {}
-    for i, seg in ipairs(TIP) do
-        local points = {}
-        for k = 2, #seg, 2 do
-            local x, y = seg[k], seg[k + 1]
-            if edge == "top" then
-                points[#points + 1] = x
-                points[#points + 1] = y
-            elseif edge == "bottom" then
-                points[#points + 1] = x
-                points[#points + 1] = h - y
-            elseif edge == "left" then
-                points[#points + 1] = y
-                points[#points + 1] = x
-            else
-                points[#points + 1] = h - y
-                points[#points + 1] = x
-            end
-        end
-        commands[i] = { op = seg[1], points = points }
+-- The body and its arrow on `side` as one clockwise contour with the kit's smoothed corners.
+local function outline(side)
+    local r = POPOVER.radius
+    local commands = { { op = "M", points = { 0, r } } }
+    local function corner(x, y)
+        commands[#commands + 1] = { op = "corner", points = { x, y }, radius = r, corner_smoothing = theme.SMOOTHING }
     end
-    local vertical = edge == "top" or edge == "bottom"
-    return path {
-        width = vertical and base or h,
-        height = vertical and h or base,
-        margin = margin,
-        align_h = ({ left = "start", right = "end" })[edge] or "center",
-        align_v = ({ top = "start", bottom = "end" })[edge] or "center",
-        -- not in the kit: the arrow is flat, glass cannot be unioned into it. It is opaque, since
-        -- the body's shadow darkens the window behind a translucent arrow into a visible notch.
-        fill = computed({ theme.dark, theme.scheme }, function(d, p)
-            return flat_over(d and "#1A1A1A99" or "#FFFFFFB2", p.window_background)
-        end),
-        commands = commands,
-    }
+    local function tail(edge)
+        if edge ~= side then return end
+        commands[#commands + 1] = { op = "L", points = tip_point(side, TIP[1][1], TIP[1][2]) }
+        for k = 2, #TIP do
+            local seg, points = TIP[k], {}
+            for n = 1, 5, 2 do
+                for _, v in ipairs(tip_point(side, seg[n], seg[n + 1])) do points[#points + 1] = v end
+            end
+            commands[#commands + 1] = { op = "C", points = points }
+        end
+    end
+    corner(0, 0)
+    tail("top")
+    corner("100%", 0)
+    tail("right")
+    corner("100%", "100%")
+    tail("bottom")
+    corner(0, "100%")
+    tail("left")
+    commands[#commands + 1] = { op = "Z", points = {} }
+    return { commands = commands }
 end
 
 ---@type table
@@ -92,20 +86,21 @@ overlay.layer("glass_popover", function()
     local edge = spec.edge or "bottom" -- where the popover sits relative to its anchor
     local at = spec.anchor
     local side = ({ bottom = "top", top = "bottom", left = "right", right = "left" })[edge]
-    local body = column(material.glass("large", {
+    local props = material.glass("large", {
         width = spec.width or POPOVER.width,
-        radius = POPOVER.radius,
         padding = POPOVER.padding,
         on_click = function() end,
         children = { type(spec.content) == "function" and spec.content() or spec.content },
-    }))
-    -- The arrow paints after the body, which would otherwise shade it with its own shadow: it
-    -- hangs outside the body's box, which leaves room for it with a margin.
-    local tip = arrow(side, margin_on(side, -POPOVER.arrow[2]))
+    })
+    -- One contour for body and arrow; its own smoothed corners stand in for radius and smoothing.
+    props.corner_smoothing = nil
+    props.outline = outline(side)
+    local body = column(props)
     local stack = column {
         align_h = edge == "left" and "end" or "center",
         align_v = edge == "top" and "end" or "center",
-        children = { rect { margin = margin_on(side, POPOVER.arrow[2]), children = { body, tip } } },
+        -- The arrow paints past the body's box; the margin leaves it room.
+        children = { rect { margin = margin_on(side, POPOVER.arrow[2]), children = { body } } },
     }
     local g = POPOVER.gap
     -- The anchor's box, stretched or shifted so the popover centres on it.

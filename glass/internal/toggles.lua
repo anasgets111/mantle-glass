@@ -25,13 +25,14 @@ function M.ring(focused)
     return computed({ focused, theme.c.accent }, function(f, accent) return f and core.focus_ring(accent) or {} end)
 end
 
--- Wires press tracking, keyboard focus and the click into `props`; returns `held`, `focused`.
--- `activate` runs unless `opts.disabled`. The ring is drawn by the caller from `focused`.
+-- Wires press tracking, keyboard focus and the click into `props`; returns `held` and `focused`,
+-- true only for keyboard focus. `activate` runs unless `opts.disabled`. The ring is drawn by the
+-- caller from `focused`.
 function M.interact(name, props, opts, activate)
     local held = core.pressable(name, props)
-    local focused = focused("glass_focus_" .. name)
+    local focused = focus_visible("glass_focus_" .. name)
     local disabled = M.sig(opts.disabled)
-    props.focused = focused
+    props.focus_visible = focused
     props.focus_ring = false
     props.hittable = disabled:map(function(d) return not d end)
     props.on_click = function()
