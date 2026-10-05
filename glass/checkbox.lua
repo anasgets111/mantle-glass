@@ -5,7 +5,7 @@ local core = require("glass.core")
 local material = require("glass.material")
 local tg = require("glass.internal.toggles")
 
-local c, FADE = theme.c, theme.motion.fade
+local FADE = theme.motion.fade
 
 -- Per size: box, checkbox radius, label gap (checkbox, radio), frame height, label style, then the
 -- check and dash as { x, y, w, h } inside the box, and the radio dot's diameter.
@@ -25,10 +25,14 @@ local function choice(id, opts, radio, status, activate)
     local s = SIZES[opts.size or "regular"]
     local n = tg.role(opts)
     local disabled = tg.sig(opts.disabled)
+    local active = core.active(opts.window)
     local props = { accessible_name = opts.label or id, height = s.frame, spacing = s.gap[radio and 2 or 1] }
     local held, focused = tg.interact("cb_" .. id, props, opts, activate)
     local on = status:map(function(v) return v ~= "off" end)
-    local dim = disabled:map(function(d) return d and 0.5 or 1 end)
+    local dim = computed({ disabled, active }, function(d, a) return d and a and 0.5 or 1 end)
+    local glyph = computed({ active, disabled, theme.scheme }, function(a, d, p)
+        return a and p.on_accent or p[d and "inactive_glyph_disabled" or "inactive_glyph"]
+    end)
     local ck, dh = s.check, s.dash
     local mark
     if radio then
@@ -38,17 +42,17 @@ local function choice(id, opts, radio, status, activate)
             radius = s.dot / 2,
             align_h = "center",
             align_v = "center",
-            background = c.on_accent,
+            background = glyph,
             scale = status:map(function(v) return v == "on" and 1 or 0 end),
             opacity = dim,
-            animate = { scale = theme.motion.snappy },
+            animate = { scale = theme.motion.snappy, background = FADE },
         })
     else
         mark = path {
             width = ck[3],
             height = ck[4],
             margin = { left = ck[1], top = ck[2] },
-            stroke = c.on_accent,
+            stroke = glyph,
             stroke_width = ck[3] * 0.2,
             stroke_cap = "round",
             stroke_join = "round",
@@ -69,13 +73,13 @@ local function choice(id, opts, radio, status, activate)
             radius = radio and s.box / 2 or s.radius,
             align_v = "center",
             shadows = tg.ring(focused),
-            background = computed({ on, held, disabled, theme.scheme }, function(checked, h, d, p)
+            background = computed({ on, held, disabled, active, theme.scheme }, function(checked, h, d, a, p)
                 if checked then
-                    return p[n("accent")]
+                    return a and p[n("accent")] or p[d and "inactive_disabled_fill" or "inactive_fill"]
                 end
-                return h and theme.alpha(p.label, 0.19) or p[n(d and "tertiary_fill" or "fill")]
+                return h and theme.alpha(p.label, 0.19) or p[d and (a and n("tertiary_fill") or "quaternary_fill") or n("fill")]
             end),
-            opacity = computed({ on, disabled }, function(checked, d) return d and checked and 0.45 or 1 end),
+            opacity = computed({ on, disabled, active }, function(checked, d, a) return d and checked and a and 0.45 or 1 end),
             animate = { background = FADE, opacity = FADE },
             children = {
                 tg.pressed_tint(radio and s.box / 2 or s.radius, held, on),
@@ -85,9 +89,9 @@ local function choice(id, opts, radio, status, activate)
                     height = dh[4],
                     radius = dh[4] / 2,
                     margin = { left = dh[1], top = dh[2] },
-                    background = c.on_accent,
-                    opacity = computed({ status, disabled }, function(v, d) return v == "mixed" and (d and 0.5 or 1) or 0 end),
-                    animate = { opacity = FADE },
+                    background = glyph,
+                    opacity = computed({ status, dim }, function(v, k) return v == "mixed" and k or 0 end),
+                    animate = { opacity = FADE, background = FADE },
                 }),
             },
         }),
@@ -98,8 +102,16 @@ local function choice(id, opts, radio, status, activate)
     return row(props)
 end
 
--- Checkbox. opts: value (state: true, false or "mixed"; a click turns mixed on), label, size,
--- disabled, on_glass, on_change(value).
+-- Checkbox.
+---@class glass.CheckboxOpts: glass.ControlOpts
+---@field value? StateSignal<boolean|"mixed"> A click on mixed turns on.
+---@field label? string|Signal<string>
+---@field on_change? fun(value: boolean)
+---@field [string] "no such property"
+
+---@param id string
+---@param opts? glass.CheckboxOpts
+---@return Node
 function M.checkbox(id, opts)
     opts = opts or {}
     ---@type StateSignal<boolean|"mixed">
@@ -114,8 +126,17 @@ function M.checkbox(id, opts)
     end)
 end
 
--- Radio group. opts: options (list of labels), value (state: the chosen label), horizontal, size,
--- disabled, on_glass, on_change(label).
+-- Radio group.
+---@class glass.RadioGroupOpts: glass.ControlOpts
+---@field options string[] Labels.
+---@field value? StateSignal<string> The chosen label; default the first.
+---@field horizontal? boolean
+---@field on_change? fun(label: string)
+---@field [string] "no such property"
+
+---@param id string
+---@param opts glass.RadioGroupOpts
+---@return Node
 function M.radio_group(id, opts)
     local value = opts.value or state("glass_radio_" .. id, opts.options[1])
     local kids = {}

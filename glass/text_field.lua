@@ -4,9 +4,27 @@ local fields = require("glass.internal.fields")
 
 local M = {}
 
--- Text field. opts: size ("mini".."xl"), width (default 120), value (state of the text), placeholder,
--- disabled, max_length, on_change(text), on_submit(text), name (accessible name), props (extra box
--- props). Returns the node and { value, focus() }; wrap the call in parentheses to keep the node.
+-- Text field. Returns the node and a handle; wrap the call in parentheses to keep the node.
+---@class glass.FieldHandle
+---@field value StateSignal<string>
+---@field focus fun()
+
+---@class glass.TextFieldOpts
+---@field size? glass.Size
+---@field width? number Default 120.
+---@field value? StateSignal<string>
+---@field placeholder? string
+---@field disabled? boolean|Signal<boolean>
+---@field max_length? integer
+---@field on_change? fun(text: string)
+---@field on_submit? fun(text: string)
+---@field name? string Accessible name.
+---@field props? table Extra box props.
+---@field [string] "no such property"
+
+---@param id string
+---@param opts? glass.TextFieldOpts
+---@return Node, glass.FieldHandle
 function M.text_field(id, opts)
     opts = opts or {}
     local inset = fields.SIZES[opts.size or "regular"].inset

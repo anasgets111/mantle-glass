@@ -18,9 +18,15 @@ local BUTTON = {
     xl = { 30, 6.5, 13, 3 },
 }
 
--- Combo box. opts: items (strings), size, width (default 120), value (state of the text),
--- placeholder, disabled, max_length, on_change(text), on_submit(text), name, props. Picking an item
--- puts it in the field. Returns the node and { value, focus() }.
+-- Combo box. Picking an item puts it in the field.
+---@class glass.ComboBoxOpts: glass.TextFieldOpts
+---@field items? string[]
+---@field window? string
+---@field [string] "no such property"
+
+---@param id string
+---@param opts? glass.ComboBoxOpts
+---@return Node, glass.FieldHandle
 function M.combo_box(id, opts)
     opts = opts or {}
     local size = opts.size or "regular"
@@ -31,6 +37,7 @@ function M.combo_box(id, opts)
         size = size,
         kind = "plain",
         disabled = opts.disabled,
+        window = opts.window,
         name = "Menu",
         on_click = function()
             local now, shown = handle.value:get(), {}
@@ -41,6 +48,7 @@ function M.combo_box(id, opts)
                 anchor = anchor,
                 items = shown,
                 width = "anchor",
+                window = opts.window,
                 on_pick = function(item)
                     handle.value:set(item.label)
                     if opts.on_change then

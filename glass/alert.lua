@@ -141,13 +141,26 @@ end, {
     end,
 })
 
--- opts: icon? (a Lucide name), title, message?, buttons ({ label, kind?, on_click? }: kind
--- "default" is the preferred accent button, "destructive" red, anything else plain; the order given
--- is the order shown), suppression? ({ label?, value? } a "do not show again" checkbox; value is a
--- state). Every button closes the alert, then runs its `on_click`.
+-- Alert: window modal; every button closes it, then runs its `on_click`.
+---@class glass.AlertButton
+---@field label string
+---@field kind? "default"|"destructive"|string "default" is the preferred accent button, "destructive" red, anything else plain.
+---@field on_click? fun()
+---@field [string] "no such property"
+
+---@class glass.AlertOpts
+---@field icon? string Lucide name.
+---@field title string
+---@field message? string
+---@field buttons? glass.AlertButton[] In the order shown.
+---@field suppression? { label?: string, value?: StateSignal<boolean> } A "do not show again" checkbox.
+---@field window? string The window or panel it opens over; default `core.window`.
+---@field [string] "no such property"
+
+---@param opts glass.AlertOpts
 function M.open_alert(opts)
     spec = opts
-    overlay.open("glass_alert")
+    overlay.open("glass_alert", nil, opts.window)
 end
 
 overlay.layer("glass_sheet", function()
@@ -186,12 +199,17 @@ overlay.layer("glass_sheet", function()
     }
 end)
 
--- opts: content (a node, or a function taking `close` and returning one), width (default 390).
--- Laid out with the kit's 20 px padding; the content closes it with `overlay.close("glass_sheet")`
--- or the `close` it is given.
+-- Sheet: laid out with the kit's 20 px padding; close it with the given `close` or `overlay.close("glass_sheet")`.
+---@class glass.SheetOpts
+---@field content Node|fun(close: fun()): Node
+---@field width? number Default 390.
+---@field window? string The window or panel it opens over; default `core.window`.
+---@field [string] "no such property"
+
+---@param opts glass.SheetOpts
 function M.open_sheet(opts)
     spec = { sheet = opts }
-    overlay.open("glass_sheet")
+    overlay.open("glass_sheet", nil, opts.window)
 end
 
 return M

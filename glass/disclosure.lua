@@ -14,8 +14,19 @@ local SLOT = { width = 18, height = 16 } -- the group's chevron slot, from the k
 
 local M = {}
 
--- Disclosure button. opts: value (state boolean, true = expanded), size, disabled, on_glass,
--- label (accessible name), on_change(expanded).
+-- Disclosure button.
+---@class glass.DisclosureButtonOpts
+---@field value? StateSignal<boolean> True = expanded.
+---@field size? glass.Size
+---@field disabled? boolean|Signal<boolean>
+---@field on_glass? boolean
+---@field label? string Accessible name.
+---@field on_change? fun(expanded: boolean)
+---@field [string] "no such property"
+
+---@param id string
+---@param opts? glass.DisclosureButtonOpts
+---@return Node
 function M.disclosure_button(id, opts)
     opts = opts or {}
     local size = opts.size or "regular"
@@ -48,8 +59,17 @@ function M.disclosure_button(id, opts)
     return rect(core.shape(props))
 end
 
--- Disclosure group. opts: label, content (a node), value (state boolean, true = expanded),
--- on_change(expanded).
+-- Disclosure group.
+---@class glass.DisclosureGroupOpts
+---@field label? string|Signal<string>
+---@field content? Node
+---@field value? StateSignal<boolean> True = expanded.
+---@field on_change? fun(expanded: boolean)
+---@field [string] "no such property"
+
+---@param id string
+---@param opts? glass.DisclosureGroupOpts
+---@return Node
 function M.disclosure_group(id, opts)
     opts = opts or {}
     ---@type StateSignal<boolean>

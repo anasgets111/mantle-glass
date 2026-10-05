@@ -9,7 +9,15 @@ local BOX = { radius = 12, padding = 12, title_gap = 6 }
 
 local M = {}
 
--- opts: title (string or signal), content (a node).
+-- Group box.
+---@class glass.GroupBoxOpts
+---@field title? string|Signal<string>
+---@field content? Node
+---@field [string] "no such property"
+
+---@param _ any Unused.
+---@param opts? glass.GroupBoxOpts
+---@return Node
 function M.group_box(_, opts)
     opts = opts or {}
     local box = rect(core.shape {

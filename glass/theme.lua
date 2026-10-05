@@ -2,8 +2,10 @@
 -- motion. `c.<role>` is a live signal of one role that follows `dark`.
 local M = {}
 
+---@type StateSignal<boolean>
 M.dark = state("glass_dark", true)
 
+---@type StateSignal<string>
 M.accent = state("glass_accent", "blue")
 
 -- System colours: { light, dark, light vibrant (plus-darker), dark vibrant (plus-lighter) }.
@@ -44,6 +46,16 @@ local ROLES = {
     vibrant_fill = { "#00000026", "#FFFFFF24" },
     vibrant_secondary_fill = { "#00000012", "#FFFFFF14" },
     vibrant_tertiary_fill = { "#0000000D", "#FFFFFF0D" },
+    inactive_fill = { "#00000024", "#FFFFFF1A" },
+    inactive_disabled_fill = { "#0000000D", "#FFFFFF08" },
+    inactive_selected_fill = { "#00000021", "#FFFFFF21" },
+    inactive_selected_disabled_fill = { "#0000000F", "#FFFFFF0F" },
+    inactive_glyph = { "#000000B2", "#FFFFFFB2" },
+    inactive_glyph_disabled = { "#00000038", "#FFFFFF38" },
+    inactive_progress = { "#0000001A", "#FFFFFF40" },
+    vibrant_inactive_fill = { "#00000026", "#FFFFFF38" },
+    vibrant_inactive_progress = { "#00000026", "#FFFFFF40" },
+    vibrant_inactive_disabled_fill = { "#0000000D", "#FFFFFF1A" },
     separator = { "#3C3C434A", "#FFFFFF1A" },
     chrome_border = { "#3C3C431F", "#3C3C431F" },
     window_background = { "#FFFFFF", "#1E1E1E" },
@@ -74,6 +86,10 @@ local function palette(dark, accent)
     local a = M.SYSTEM[accent] or M.SYSTEM.blue
     p.accent = a[dark and 2 or 1]
     p.vibrant_accent = a[dark and 4 or 3]
+    -- not in the kit: it shows only blue's highlight; other accents take their deeper vibrant shade.
+    if accent ~= "blue" then
+        p.menu_highlight = a[3]
+    end
     return p
 end
 
@@ -103,8 +119,9 @@ end
 M.CLEAR = "#00000000"
 
 -- native text styles: { size, weight, line height, tracking }. SF Pro's tracking per size, applied
--- to Inter, which stands in for SF Pro.
+-- to Inter, which stands in for SF Pro; from 20 px up, as SF Pro Display, Inter Display.
 M.FONT = "Inter"
+M.FONT_DISPLAY = "Inter Display"
 M.type = {
     large_title = { 26, 400, 32, 0.22 },
     title1 = { 22, 400, 26, -0.26 },

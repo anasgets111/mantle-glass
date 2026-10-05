@@ -18,7 +18,21 @@ local SIZES = {
 
 local M = {}
 
--- opts: value (state number), min, max, step (default 1), size, disabled, on_glass, on_change(value).
+-- Stepper.
+---@class glass.StepperOpts
+---@field value? StateSignal<number> Default `max(min, 0)`.
+---@field min? number
+---@field max? number
+---@field step? number Default 1.
+---@field size? glass.Size
+---@field disabled? boolean|Signal<boolean>
+---@field on_glass? boolean
+---@field on_change? fun(value: number)
+---@field [string] "no such property"
+
+---@param id string
+---@param opts? glass.StepperOpts
+---@return Node
 function M.stepper(id, opts)
     opts = opts or {}
     local s = SIZES[opts.size or "regular"]

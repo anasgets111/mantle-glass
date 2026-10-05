@@ -10,13 +10,26 @@ local ROW = { height = 32, radius = 8, inset = 4, pad = 10, max_height = 320 }
 
 local M = {}
 
--- opts: items (array or signal of arrays), row (function(item, selected) -> node, required; `selected`
--- is a boolean signal, so the row can switch its content to `on_accent`), key
--- (function(item) -> unique string; default tostring), value (state of the selected key),
--- alternating (tint every other row), max_height (default 320; longer lists scroll),
--- on_select(item).
+-- List: selection is an accent fill. `row` gets boolean signals: `emphasized` while the row has
+-- the accent fill, so its content can switch to `on_accent`; `selected` stays true while the window
+-- is inactive and the fill is grey.
+---@class glass.ListOpts
+---@field items any[]|Signal<any[]>
+---@field row fun(item: any, emphasized: Signal<boolean>, selected: Signal<boolean>): Node
+---@field key? fun(item: any): string Unique per item; default `tostring`.
+---@field value? StateSignal<string> The selected key.
+---@field alternating? boolean Tint every other row.
+---@field max_height? number Default 320; longer lists scroll.
+---@field on_select? fun(item: any)
+---@field window? string
+---@field [string] "no such property"
+
+---@param id string
+---@param opts glass.ListOpts
+---@return Node
 function M.list(id, opts)
     opts = opts or {}
+    local active = core.active(opts.window)
     local key = opts.key or tostring
     ---@type StateSignal<string>
     local value = opts.value or state("glass_list_" .. id, "")
@@ -38,6 +51,7 @@ function M.list(id, opts)
         itemfn = function(entry)
             local k = key(entry.item)
             local selected = value:map(function(v) return v == k end)
+            local emphasized = computed({ selected, active }, function(on, a) return on and a end)
             local props = {
                 width = "fill",
                 height = ROW.height,
@@ -45,7 +59,7 @@ function M.list(id, opts)
                 padding = { left = ROW.pad, right = ROW.pad },
                 align_v = "center",
                 animate = { background = FADE },
-                children = { opts.row(entry.item, selected) },
+                children = { opts.row(entry.item, emphasized, selected) },
                 on_click = function()
                     value:set(k)
                     if opts.on_select then
@@ -54,9 +68,9 @@ function M.list(id, opts)
                 end,
             }
             local striped = opts.alternating and entry.i % 2 == 0
-            -- not in the kit: native lists fill a key window's selected row with the accent.
-            props.background = computed({ selected, theme.scheme }, function(on, p)
-                return on and p.accent or striped and p.quaternary_fill or theme.CLEAR
+            -- not in the kit: native lists fill a key window's selected row with the accent, else grey.
+            props.background = computed({ selected, active, theme.scheme }, function(on, a, p)
+                return on and (a and p.accent or p.inactive_selected_fill) or striped and p.quaternary_fill or theme.CLEAR
             end)
             return row(core.shape(props))
         end,

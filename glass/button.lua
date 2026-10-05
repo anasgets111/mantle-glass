@@ -7,10 +7,20 @@ local text, icon = core.text, core.icon
 
 local M = {}
 
--- Push button. opts: kind ("bordered" default, "default", "destructive", "default_destructive",
--- "tinted", "borderless", "toggle"), size ("mini".."xl"), label, icon (Lucide name, leading),
--- value (toggle's boolean state), disabled, on_glass, on_click, name (accessible name; defaults
--- to the label), props (extra node props).
+-- Push button.
+---@class glass.ButtonOpts: glass.ControlOpts
+---@field kind? "bordered"|"default"|"destructive"|"default_destructive"|"tinted"|"borderless"|"toggle" Default "bordered".
+---@field label? string|Signal<string>
+---@field icon? string|Signal<string> Leading Lucide name; alone makes a square.
+---@field value? StateSignal<boolean> Selected state; a `toggle` keeps its own if omitted.
+---@field on_click? fun()
+---@field name? string Accessible name; default the label, else the icon.
+---@field props? table Extra node props.
+---@field [string] "no such property"
+
+---@param id string
+---@param opts? glass.ButtonOpts
+---@return Node
 function M.button(id, opts)
     opts = opts or {}
     local kind, size = opts.kind or "bordered", theme.SIZES[opts.size or "regular"]
@@ -30,6 +40,7 @@ function M.button(id, opts)
         size = opts.size,
         kind = kind,
         on_glass = opts.on_glass,
+        window = opts.window,
         disabled = opts.disabled,
         on = value,
         -- not in the kit: an icon-only push button is a square of the control's height
@@ -55,8 +66,17 @@ function M.button(id, opts)
 end
 
 -- Arrow button: the kit's icon-only capsule, a chevron.up.chevron.down square of the control's
--- height. opts: size, icon (default "chevrons-up-down"), disabled, on_glass, on_click, name,
--- props.
+-- height.
+---@class glass.ArrowButtonOpts: glass.ControlOpts
+---@field icon? string|Signal<string> Default "chevrons-up-down".
+---@field on_click? fun()
+---@field name? string
+---@field props? table
+---@field [string] "no such property"
+
+---@param id string
+---@param opts? glass.ArrowButtonOpts
+---@return Node
 function M.arrow_button(id, opts)
     opts = opts or {}
     local size = theme.SIZES[opts.size or "regular"]
@@ -65,6 +85,7 @@ function M.arrow_button(id, opts)
         kind = "plain",
         on_glass = opts.on_glass,
         disabled = opts.disabled,
+        window = opts.window,
         width = size.height,
         radius = theme.CAPSULE,
         name = opts.name or "Arrows",

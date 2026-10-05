@@ -18,9 +18,23 @@ local SIZES = {
 
 local M = {}
 
--- opts: items (list of { icon, label, value }; a segment's key is value, else label, else icon),
--- value (state: the selected key, or with `multiple` a set { [key] = true }), multiple, size,
--- disabled, on_glass, on_change(value).
+-- Segmented control; a segment's key is `value`, else `label`, else `icon`.
+---@class glass.Segment
+---@field icon? string
+---@field label? string
+---@field value? any
+---@field [string] "no such property"
+
+---@class glass.SegmentedControlOpts: glass.ControlOpts
+---@field items glass.Segment[]
+---@field value? StateSignal<any> The selected key, or with `multiple` a set `{ [key] = true }`; default the first item.
+---@field multiple? boolean
+---@field on_change? fun(value: any)
+---@field [string] "no such property"
+
+---@param id string
+---@param opts glass.SegmentedControlOpts
+---@return Node
 function M.segmented_control(id, opts)
     local s = SIZES[opts.size or "regular"]
     local n = tg.role(opts)
@@ -28,6 +42,7 @@ function M.segmented_control(id, opts)
     local function key(it) return it.value or it.label or it.icon end
     local value = opts.value or state("glass_seg_" .. id, not multiple and key(items[1]) or {})
     local disabled = tg.sig(opts.disabled)
+    local active = core.active(opts.window)
     local ons, kids = {}, {}
     for i, it in ipairs(items) do
         local k = key(it)
@@ -60,14 +75,23 @@ function M.segmented_control(id, opts)
                 opts.on_change(value:get())
             end
         end)
-        local glyph = computed({ on, disabled, theme.scheme }, function(selected, d, p)
-            return selected and p.on_accent or p[d and n("tertiary_label") or "vibrant_label"]
+        local glyph = computed({ on, disabled, active, theme.scheme }, function(selected, d, a, p)
+            if selected and a then
+                return p.on_accent
+            end
+            return p[d and n("tertiary_label") or selected and not opts.on_glass and "label" or "vibrant_label"]
         end)
         props.shadows = tg.ring(focused)
-        props.background = computed({ on, held, theme.scheme }, function(selected, h, p)
+        props.background = computed({ on, held, disabled, active, theme.scheme }, function(selected, h, d, a, p)
+            if selected and not a then
+                if opts.on_glass then
+                    return p[d and "tertiary_fill" or "fill"]
+                end
+                return p[d and "inactive_selected_disabled_fill" or "inactive_selected_fill"]
+            end
             return selected and p[n("accent")] or h and theme.alpha(p.label, 0.16) or theme.CLEAR
         end)
-        props.opacity = computed({ on, disabled }, function(selected, d) return d and selected and 0.45 or 1 end)
+        props.opacity = computed({ on, disabled, active }, function(selected, d, a) return d and selected and a and 0.45 or 1 end)
         props.animate = { background = FADE, opacity = FADE }
         local content = {}
         if it.icon then

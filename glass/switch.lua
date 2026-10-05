@@ -20,11 +20,22 @@ local MOVE = theme.motion.snappy
 
 local M = {}
 
--- opts: value (state boolean), size, disabled, on_glass, label (accessible name), on_change(on).
+-- Switch.
+---@class glass.SwitchOpts: glass.ControlOpts
+---@field value? StateSignal<boolean>
+---@field label? string Accessible name.
+---@field on_change? fun(on: boolean)
+---@field [string] "no such property"
+
+---@param id string
+---@param opts? glass.SwitchOpts
+---@return Node
 function M.switch(id, opts)
     opts = opts or {}
     local s = SIZES[opts.size or "regular"]
     local n = tg.role(opts)
+    local active = core.active(opts.window)
+    local disabled = tg.sig(opts.disabled)
     ---@type StateSignal<boolean>
     local value = opts.value or state("glass_switch_" .. id, false)
     local props = { accessible_name = opts.label or id, width = s.tw, height = s.th, radius = theme.CAPSULE }
@@ -53,9 +64,12 @@ function M.switch(id, opts)
     local idle_fill = opts.on_glass and c.on_accent
         or computed({ theme.dark, theme.scheme }, function(dark, p) return dark and theme.alpha(p.on_accent, 0.85) or p.on_accent end)
     props.shadows = tg.ring(focused)
-    props.background = computed({ value, held, theme.scheme }, function(on, h, p)
+    props.background = computed({ value, held, active, disabled, theme.scheme }, function(on, h, a, d, p)
         if on then
-            return p[n("accent")]
+            if a then
+                return p[n("accent")]
+            end
+            return p[opts.on_glass and (d and "vibrant_inactive_disabled_fill" or "vibrant_inactive_fill") or d and "tertiary_fill" or "fill"]
         end
         return h and theme.alpha(p.label, 0.19) or p[n("fill")]
     end)

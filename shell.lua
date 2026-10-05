@@ -3,6 +3,7 @@
 fonts { "Inter", "lucide", "Noto Sans", "Noto Color Emoji" }
 
 local glass = require("glass")
+glass.core.window = "glass"
 
 local theme, overlay = glass.theme, glass.overlay
 
@@ -26,19 +27,14 @@ local stored = state("glass_page", "buttons")
 local page = stored:map(function(name) return BUILT[name] and name or "buttons" end)
 stored:on_change(overlay.close_all)
 
-local body = page:map(function(name)
-    return {
-        column {
-            id = name,
-            width = "fill",
-            height = "fill",
-            scroll = scroll("glass_scroll_" .. name),
-            opacity = 1,
-            animate = { scroll = theme.motion.smooth, opacity = { duration = 200, from = 0 } },
-            children = { BUILT[name] },
-        },
-    }
-end)
+local VIEWS = {}
+for name, node in pairs(BUILT) do
+    VIEWS[name] = glass.scroll_view(name, {
+        child = node,
+        props = { id = name, opacity = 1, animate = { scroll = theme.motion.smooth, opacity = { duration = 200, from = 0 } } },
+    })
+end
+local body = page:map(function(name) return { VIEWS[name] } end)
 
 local function toggle_dark() theme.dark:set(not theme.dark:get()) end
 
@@ -69,10 +65,9 @@ return {
         app_id = "mantle-glass-demo",
         min_size = { width = 1100, height = 760 },
         on_close = function() process.detach("mantle", { "stop", "--pid", tostring(mantle.pid) }) end,
-        sidebar = glass.sidebar("nav", { value = stored, window = "glass", sections = { { header = "Controls", items = ITEMS } } }),
+        sidebar = glass.sidebar("nav", { value = stored, sections = { { header = "Controls", items = ITEMS } } }),
         trailing = {
             glass.toolbar_group("look", {
-                window = "glass",
                 items = {
                     { icon = "palette", label = "Next accent colour", on_click = next_accent },
                     { icon = theme.dark:map(function(d) return d and "sun" or "moon" end), label = "Toggle appearance", on_click = toggle_dark },

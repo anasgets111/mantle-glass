@@ -23,10 +23,14 @@ local TOOLBAR = {
     xl = { 10, 32, 13, 10, 159 },
 }
 
--- Search field: a capsule with a magnifier, a clear button once it holds text. opts: size,
--- width (default 120; toolbar 149 or 159), value (state of the text), placeholder ("Search"),
--- disabled, toolbar (sits on small glass in a toolbar; size "regular" or "xl"), max_length,
--- on_change(text), on_submit(text), name, props. Returns the node and { value, focus() }.
+-- Search field: a capsule with a magnifier, a clear button once it holds text.
+---@class glass.SearchFieldOpts: glass.TextFieldOpts
+---@field toolbar? boolean Sits on small glass in a toolbar; `size` "regular" or "xl".
+---@field [string] "no such property"
+
+---@param id string
+---@param opts? glass.SearchFieldOpts
+---@return Node, glass.FieldHandle
 function M.search_field(id, opts)
     opts = opts or {}
     local size = opts.size or "regular"

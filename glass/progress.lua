@@ -5,8 +5,6 @@ local core = require("glass.core")
 local material = require("glass.material")
 local tg = require("glass.internal.toggles")
 
-local c = theme.c
-
 local BAR_HEIGHT = { small = 6, regular = 10 }
 -- Ring: outer diameter and ring width. Spinner: box, spoke width and length.
 local RING = { small = { d = 16, w = 5 }, regular = { d = 32, w = 5 } }
@@ -31,19 +29,37 @@ local function wash(light, dark)
     return computed({ theme.dark, theme.scheme }, function(is_dark, p) return theme.alpha(p.label, is_dark and dark or light) end)
 end
 
--- opts: value (0..1 number or signal), indeterminate (boolean or signal: a moving gradient fill),
--- size ("small" 6 px or "regular" 10 px), width (default 140), on_glass.
+-- The fill: the accent, grey while the window is inactive.
+local function fill_color(opts)
+    local n = tg.role(opts)
+    return computed({ core.active(opts.window), theme.scheme }, function(a, p) return p[a and n("accent") or n("inactive_progress")] end)
+end
+
+-- Bar; fills go grey while the window is inactive.
+---@class glass.ProgressBarOpts
+---@field value? number|Signal<number> 0..1.
+---@field indeterminate? boolean|Signal<boolean> A moving gradient fill.
+---@field size? "small"|"regular" 6 or 10 px.
+---@field width? number Default 140.
+---@field on_glass? boolean
+---@field window? string
+---@field [string] "no such property"
+
+---@param _ any Unused.
+---@param opts? glass.ProgressBarOpts
+---@return Node
 function M.progress_bar(_, opts)
     opts = opts or {}
     local h = BAR_HEIGHT[opts.size or "regular"]
     local W = opts.width or 140
     local indeterminate = tg.sig(opts.indeterminate or false)
-    local fill = c[tg.role(opts)("accent")]
+    local fill = fill_color(opts)
     local function bar(extra)
         extra.height = "fill"
         extra.radius = theme.CAPSULE
         extra.hittable = false
         extra.background = fill
+        extra.animate = core.merge({ background = theme.motion.fade }, extra.animate)
         return rect(core.shape(extra))
     end
     local track = {
@@ -73,7 +89,16 @@ function M.progress_bar(_, opts)
     return rect(opts.on_glass and material.vibrant(core.shape(track)) or core.shape(track))
 end
 
--- opts: value (0..1 number or signal), size ("small" 16 px or "regular" 32 px), on_glass.
+---@class glass.ProgressRingOpts
+---@field value? number|Signal<number> 0..1.
+---@field size? "small"|"regular" 16 or 32 px.
+---@field on_glass? boolean
+---@field window? string
+---@field [string] "no such property"
+
+---@param _ any Unused.
+---@param opts? glass.ProgressRingOpts
+---@return Node
 function M.progress_ring(_, opts)
     opts = opts or {}
     local s = RING[opts.size or "regular"]
@@ -93,16 +118,24 @@ function M.progress_ring(_, opts)
         children = {
             arc { stroke = wash(0.06, 0.08) },
             arc {
-                stroke = c[tg.role(opts)("accent")],
+                stroke = fill_color(opts),
                 stroke_cap = "round",
                 trim_end = fraction(opts),
-                animate = { trim_end = theme.motion.default },
+                animate = { trim_end = theme.motion.default, stroke = theme.motion.fade },
             },
         },
     }
 end
 
--- opts: size ("small" 16 px or "regular" 32 px). The lead spoke steps round the circle clockwise.
+-- The lead spoke steps round the circle clockwise.
+---@class glass.SpinnerOpts
+---@field size? "small"|"regular" 16 or 32 px.
+---@field window? string
+---@field [string] "no such property"
+
+---@param _ any Unused.
+---@param opts? glass.SpinnerOpts
+---@return Node
 function M.spinner(_, opts)
     opts = opts or {}
     local s = SPINNER[opts.size or "regular"]
@@ -127,7 +160,8 @@ function M.spinner(_, opts)
         width = s.d,
         height = s.d,
         accessible_name = "loading",
-        animate = { rotate = SPIN },
+        opacity = core.active(opts.window):map(function(a) return a and 1 or 0.5 end),
+        animate = { rotate = SPIN, opacity = theme.motion.fade },
         children = spokes,
     }
 end

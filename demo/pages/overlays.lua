@@ -164,7 +164,7 @@ local notifications = line {
     glass.button("notify", {
         kind = "default",
         label = "Show notification",
-        on_click = function() glass.notify { title = "Build finished", body = "glass-demo compiled with no warnings.", icon = "check", app = "Mantle" } end,
+        on_click = function() glass.open_notification { title = "Build finished", body = "glass-demo compiled with no warnings.", icon = "check", app = "Mantle" } end,
     }),
 }
 

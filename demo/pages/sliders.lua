@@ -92,7 +92,7 @@ return section.page {
             row { spacing = 16, align_v = "center", children = {
                 glass.circular_slider("wall_dial", { value = state("demo_sliders_wall_d", 0.5), on_glass = true }),
                 glass.progress_ring("wall_ring", { value = bar, on_glass = true }),
-                glass.spinner("wall_spin", { on_glass = true }),
+                glass.spinner("wall_spin", {}),
             } },
         }),
     }, 260)),

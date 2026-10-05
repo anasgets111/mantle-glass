@@ -5,6 +5,7 @@ local core = require("glass.core")
 local material = require("glass.material")
 local window = require("glass.window")
 local reveal = require("glass.internal.sidebar").reveal
+local scroll_view = require("glass.scroll_view").scroll_view
 
 local c, FADE = theme.c, theme.motion.fade
 
@@ -31,10 +32,31 @@ local function label(content, color, font, extra)
     }, extra)))
 end
 
--- opts: sections ({ { header?, items = { { name, label, icon?, count?, children? } } } }),
--- value (state of the selected item name; default the first item), size ("small", "medium"
--- default, "large"), on_select(name), window (the id whose focus it follows). A child list nests
--- items to any depth.
+-- Sidebar content for `app_window`'s `sidebar`: rows select on click, folders open in place.
+---@class glass.SidebarItem
+---@field name string
+---@field label string
+---@field icon? string
+---@field count? string|Signal<string>
+---@field children? glass.SidebarItem[]
+---@field [string] "no such property"
+
+---@class glass.SidebarSection
+---@field header? string
+---@field items glass.SidebarItem[]
+---@field [string] "no such property"
+
+---@class glass.SidebarOpts
+---@field sections glass.SidebarSection[]
+---@field value? StateSignal<string> Selected item name; default the first item.
+---@field size? "small"|"medium"|"large" Default "medium".
+---@field on_select? fun(name: string)
+---@field window? string
+---@field [string] "no such property"
+
+---@param id string
+---@param opts glass.SidebarOpts
+---@return Node
 function M.sidebar(id, opts)
     local s = SIZES[opts.size or "medium"]
     local first = opts.sections[1].items[1].name
@@ -141,14 +163,11 @@ function M.sidebar(id, opts)
         end
         blocks[#blocks + 1] = column { width = "fill", children = nodes }
     end
-    return column {
-        width = "fill",
-        height = "fill",
+    return scroll_view("sidebar_" .. id, {
         scroll = scroll("glass_sidebar_" .. id),
-        padding = { left = PANE.inset, right = PANE.inset, bottom = BOTTOM },
-        spacing = SECTION_GAP,
-        children = blocks,
-    }
+        props = { padding = { left = PANE.inset, right = PANE.inset, bottom = BOTTOM } },
+        child = column { width = "fill", spacing = SECTION_GAP, children = blocks },
+    })
 end
 
 return M

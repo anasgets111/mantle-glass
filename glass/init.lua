@@ -1,12 +1,13 @@
 -- Liquid Glass for Mantle. `local glass = require("glass")` gives every component as
--- `glass.<name>(id, opts)`, plus `glass.theme`, `glass.material`, `glass.overlay` and `glass.icons`.
+-- `glass.<name>(id, opts)`, plus `glass.core`, `glass.theme`, `glass.material`, `glass.overlay` and `glass.icons`.
 -- One component family per file: `require("glass.slider")` loads one. See glass/README.md.
 return {
     theme = require("glass.theme"),
     material = require("glass.material"),
     overlay = require("glass.overlay"),
     icons = require("glass.icons"),
-    -- Core
+    -- Core; set `glass.core.window` to the app window's id before building controls.
+    core = require("glass.core"),
     merge = require("glass.core").merge,
     text = require("glass.core").text,
     icon = require("glass.core").icon,
@@ -46,12 +47,13 @@ return {
     form_row = require("glass.form").form_row,
     group_box = require("glass.group_box").group_box,
     list = require("glass.list").list,
+    scroll_view = require("glass.scroll_view").scroll_view,
     -- Menus, popovers, alerts and notifications
     open_menu = require("glass.menu").open_menu,
-    menu_open = require("glass.menu").menu_open,
+    is_menu_open = require("glass.menu").is_menu_open,
     open_popover = require("glass.popover").open_popover,
     open_alert = require("glass.alert").open_alert,
     open_sheet = require("glass.alert").open_sheet,
     tooltip = require("glass.tooltip").tooltip,
-    notify = require("glass.notification").notify,
+    open_notification = require("glass.notification").open_notification,
 }

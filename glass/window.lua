@@ -10,18 +10,7 @@ local merge, text, icon = core.merge, core.text, core.icon
 
 local M = {}
 
-local ALWAYS = theme.dark:map(function() return true end)
-local actives = {}
-
--- Whether window `id` has the keyboard, as a signal; always true for `nil` (no window to follow).
--- Components drawn in a window's chrome take its id as `opts.window`.
-function M.active(id)
-    if id == nil then
-        return ALWAYS
-    end
-    actives[id] = actives[id] or toplevel(id):state():map(function(s) return s.activated end)
-    return actives[id]
-end
+M.active = core.active
 
 -- A glass style while `active`, its inactive variant otherwise.
 local function by_activity(style, active)
@@ -62,32 +51,49 @@ local function band(s)
     }
 end
 
--- Close, minimise, zoom: 14 px dots on a 23 px pitch, grey while the window is inactive.
+-- Close, minimise, zoom: 14 px dots on a 23 px pitch, grey while the window is inactive. Hovering
+-- the group colours them and shows their glyphs (not in the kit; as native apps draw them).
+---@class glass.TrafficLightsOpts
+---@field on_close? fun()
+---@field window? string
+---@field [string] "no such property"
+
+---@param opts? glass.TrafficLightsOpts
+---@return Node
 function M.traffic_lights(opts)
     opts = opts or {}
     local active = M.active(opts.window)
-    local function dot(role, run, label)
+    local over = hover("glass_lights_" .. (opts.window or "app"))
+    local lit = computed({ active, over }, function(on, h) return on or h end)
+    local function dot(role, glyph, run, label)
         return rect(core.shape {
             width = 14,
             height = 14,
             radius = 7,
-            background = computed({ active, theme.scheme }, function(on, p) return on and p[role] or p.traffic_inactive end),
+            background = computed({ lit, theme.scheme }, function(on, p) return on and p[role] or p.traffic_inactive end),
             shadows = { { color = "#00000073", spread = 0.5, inset = true } },
             accessible_name = label,
             focus_ring = false,
             cursor = "default",
             on_click = run,
             animate = { background = theme.motion.fade },
+            children = {
+                icon(glyph, "#00000099", 7, {
+                    align_h = "center",
+                    opacity = over:map(function(h) return h and 1 or 0 end),
+                }),
+            },
         })
     end
     -- ponytail: minimise and zoom need `toplevel(id):minimize()` / `:maximize()` (mantle-27).
     return row {
         spacing = 9,
         align_v = "center",
+        hover = over,
         children = {
-            dot("traffic_close", opts.on_close, "Close"),
-            dot("traffic_minimize", nil, "Minimise"),
-            dot("traffic_zoom", nil, "Zoom"),
+            dot("traffic_close", "x", opts.on_close, "Close"),
+            dot("traffic_minimize", "minus", nil, "Minimise"),
+            dot("traffic_zoom", "maximize-2", nil, "Zoom"),
         },
     }
 end
@@ -109,8 +115,23 @@ local function glyph_button(id, item, inner, active)
     return rect(core.shape(props))
 end
 
--- A capsule of glass holding toolbar buttons. opts: items ({ icon, label, on_click, selected }),
--- size ("xl" 36 high, default; "medium" 24), window (the id whose focus it follows).
+-- A capsule of glass holding toolbar buttons.
+---@class glass.ToolbarItem
+---@field icon string
+---@field label? string
+---@field on_click? fun()
+---@field selected? boolean|Signal<boolean>
+---@field [string] "no such property"
+
+---@class glass.ToolbarGroupOpts
+---@field items glass.ToolbarItem[]
+---@field size? "xl"|"medium" "xl" 36 high (default), "medium" 24.
+---@field window? string The id whose focus it follows.
+---@field [string] "no such property"
+
+---@param id string
+---@param opts glass.ToolbarGroupOpts
+---@return Node
 function M.toolbar_group(id, opts)
     local xl = opts.size ~= "medium"
     local inner, pad = xl and 28 or 20, xl and 4 or 2
@@ -130,6 +151,14 @@ function M.toolbar_group(id, opts)
 end
 
 -- A single toolbar button: a group of one.
+---@class glass.ToolbarButtonOpts: glass.ToolbarItem
+---@field size? "xl"|"medium"
+---@field window? string
+---@field [string] "no such property"
+
+---@param id string
+---@param opts glass.ToolbarButtonOpts
+---@return Node
 function M.toolbar_button(id, opts)
     return M.toolbar_group(id, { size = opts.size, window = opts.window, items = { opts } })
 end
@@ -143,10 +172,6 @@ local function title_block(props)
     return column { align_v = "center", spacing = 2, children = kids }
 end
 
--- An app window in Liquid Glass chrome. props: window's own (id, title, app_id, min_size, on_close,
--- ...) plus `subtitle`, `toolbar` ("unified" default, "compact", "titlebar"), `leading` and
--- `trailing` (toolbar nodes either side of the title), `sidebar` (a node for the 256 px glass
--- pane) and `child` (the content, which scrolls under the floating toolbar).
 -- A press on empty chrome moves the window; a right press opens the compositor's window menu.
 -- Drag areas sit behind the chrome's controls, never around them, so a control's press stays its own.
 local function drag_area(id)
@@ -187,7 +212,52 @@ local function resize_grips(id)
     }
 end
 
+-- The band under the toolbar (docs/spec/foundations.md 2.5): "soft" fades the window's colour out,
+-- "hard" is the window's colour over a blur, with a hairline.
+-- ponytail: soft also blurs under its fade (r100); a masked backdrop blur sees nothing (engine gap).
+local function scroll_edge(kind, height)
+    if kind == "hard" then
+        return rect {
+            width = "fill",
+            height = height,
+            hittable = false,
+            background = theme.dark:map(function(d) return d and "#1E1E1E8C" or "#FFFFFFD9" end),
+            effect = { backdrop = { blur = 3 } },
+            border_width = { bottom = 0.67 },
+            border_color = { bottom = theme.dark:map(function(d) return d and "#FFFFFF1A" or "#0000000D" end) },
+        }
+    end
+    return rect {
+        width = "fill",
+        height = height,
+        hittable = false,
+        background = c.window_background:map(function(bg)
+            return { gradient = "linear", stops = { { 0, theme.alpha(bg, 0.6) }, { 1, theme.alpha(bg, 0) } } }
+        end),
+    }
+end
+
+local CHROME_PROPS = { subtitle = true, toolbar = true, leading = true, trailing = true, scroll_edge = true, sidebar = true, child = true }
+
+-- An app window in Liquid Glass chrome: any `window` field plus the chrome fields below.
+---@class glass.AppWindowProps: WindowProps
+---@field subtitle? string|Signal<string>
+---@field toolbar? "unified"|"compact"|"titlebar" Default "unified".
+---@field leading? Node[] Toolbar nodes left of the title.
+---@field trailing? Node[] Toolbar nodes right of the title.
+---@field scroll_edge? "soft"|"hard" Default "soft" fade; "hard" is a blurred band with a hairline.
+---@field sidebar? Node The 256 px glass pane.
+---@field child? Node The content, which scrolls under the floating toolbar.
+
+---@param props glass.AppWindowProps
+---@return Surface
 function M.app_window(props)
+    local own = {}
+    for k, v in pairs(props) do
+        if not CHROME_PROPS[k] then
+            own[k] = v
+        end
+    end
     local style = CHROME[props.toolbar or "unified"]
     local has_sidebar = props.sidebar ~= nil
     local lights = M.traffic_lights({ on_close = props.on_close, window = props.id })
@@ -207,21 +277,15 @@ function M.app_window(props)
         padding = { left = has_sidebar and 8 or style.lights[1] + 68 + 12, right = 8 },
         children = bar,
     }
-    -- The content runs under the toolbar; a hard scroll edge keeps the bar legible over it.
+    -- The content runs under the toolbar; the scroll edge keeps the bar legible over it.
     local content = rect {
         width = "fill",
         height = "fill",
         background = c.window_background,
         children = {
             rect { width = "fill", height = "fill", padding = { top = style.height }, children = { props.child } },
-            rect {
-                width = "fill",
-                height = style.height + 1,
-                background = theme.dark:map(function(d) return d and "#1E1E1E8C" or "#FFFFFFD9" end),
-                border_width = { bottom = 0.67 },
-                border_color = { bottom = theme.dark:map(function(d) return d and "#FFFFFF1A" or "#0000000D" end) },
-                children = { drag_area(props.id) },
-            },
+            scroll_edge(props.scroll_edge, style.height + 1),
+            rect { width = "fill", height = style.height, children = { drag_area(props.id) } },
             toolbar,
         },
     }
@@ -271,7 +335,8 @@ function M.app_window(props)
             end
             return dark and not has_sidebar and SHADOWS.active_tight or SHADOWS.active
         end),
-        children = overlay.root(row { width = "fill", height = "fill", children = panes }),
+        geometry = overlay.bounds(props.id),
+        children = overlay.root(row { width = "fill", height = "fill", children = panes }, props.id),
     })
     local grips = resize_grips(props.id)
     table.insert(grips, 1, frame)
@@ -280,22 +345,15 @@ function M.app_window(props)
         background = CLEAR,
         decorations = "client",
         geometry_inset = inset,
-        on_escape = overlay.escape,
-        on_key = overlay.key,
+        on_escape = function() overlay.escape(props.id) end,
+        on_key = function(key) return overlay.key(props.id, key) end,
         child = rect {
             width = "fill",
             height = "fill",
             padding = inset,
             children = { rect { width = "fill", height = "fill", children = grips } },
         },
-    }, {
-        id = props.id,
-        title = props.title,
-        app_id = props.app_id,
-        min_size = props.min_size,
-        max_size = props.max_size,
-        on_close = props.on_close,
-    }))
+    }, own))
 end
 
 return M

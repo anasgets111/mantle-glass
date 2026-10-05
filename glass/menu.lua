@@ -286,10 +286,31 @@ end, {
     key = function(key) return keys and keys(key) end,
 })
 
--- opts: anchor (a `geometry(name)` signal: the menu opens under it), items ({ label, icon?,
--- shortcut?, checked?, disabled?, submenu? (a list of items), on_click? } or { separator = true } or
--- { header = "..." }), on_pick(item)?, width? (px or "anchor"; default 244), align? ("start", or
--- "end" to line up with the anchor's trailing edge), id? (names the opener, for `menu_open`).
+-- Menu: glass panel under an anchor; arrow keys, Enter and Escape work.
+---@class glass.MenuItem
+---@field label? string
+---@field icon? string
+---@field shortcut? string
+---@field checked? boolean
+---@field disabled? boolean
+---@field submenu? glass.MenuItem[]
+---@field on_click? fun()
+---@field separator? boolean
+---@field header? string
+---@field value? any Opaque to the menu; `popup_button` compares it with its `value`, default the label.
+---@field [string] "no such property"
+
+---@class glass.MenuOpts
+---@field anchor Signal<table> A `geometry(name)` signal; the menu opens under it.
+---@field items glass.MenuItem[]
+---@field on_pick? fun(item: glass.MenuItem)
+---@field width? number|"anchor" Default 244.
+---@field align? "start"|"end" "end" lines up with the anchor's trailing edge.
+---@field id? string Names the opener, for `is_menu_open`.
+---@field window? string The window or panel it opens over; default `core.window`.
+---@field [string] "no such property"
+
+---@param opts glass.MenuOpts
 function M.open_menu(opts)
     spec = opts
     sel:set(0)
@@ -297,11 +318,13 @@ function M.open_menu(opts)
     subsel:set(0)
     deep:set(false)
     owner:set(opts.id or "")
-    overlay.open("glass_menu")
+    overlay.open("glass_menu", nil, opts.window)
 end
 
 -- A signal: true while the menu opened with `id` is showing.
-function M.menu_open(id)
+---@param id string
+---@return Signal<boolean>
+function M.is_menu_open(id)
     return computed({ shown, owner }, function(open, who) return open and who == id end)
 end
 

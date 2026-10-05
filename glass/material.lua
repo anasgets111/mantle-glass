@@ -222,6 +222,10 @@ end
 
 -- Spreads glass `style` (a name, or a signal of one) onto `props`, live across light and dark.
 -- `opts.tint` (colour or signal) colours `small_tinted`. Extra `opts.shadows` (a signal of a list, e.g. a focus ring) go on top.
+---@param style string|Signal<string>
+---@param props table
+---@param opts? { tint?: string|Signal<string>, shadows?: Signal<ShadowLayer[]> }
+---@return table
 function M.glass(style, props, opts)
     opts = opts or {}
     local tint = opts.tint
@@ -245,6 +249,8 @@ function M.glass(style, props, opts)
 end
 
 -- Vibrant foreground: `blend` that lets a `vibrant_*` colour take the glass's tone.
+---@param props table
+---@return table
 function M.vibrant(props)
     props.blend = theme.vibrancy
     return props

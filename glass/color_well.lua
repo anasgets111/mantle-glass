@@ -7,9 +7,21 @@ local M = {}
 
 local SWATCH_INSET = 3
 
--- Color well. opts: value (state of the colour, "#RRGGBB"; default green), size, selected (the
--- well is the active one, e.g. its picker is open), disabled, on_click (open the picker), name,
--- props.
+-- Color well.
+---@class glass.ColorWellOpts
+---@field size? glass.Size
+---@field value? StateSignal<string> "#RRGGBB"; default system green.
+---@field selected? boolean|Signal<boolean> The well is the active one, e.g. its picker is open.
+---@field disabled? boolean|Signal<boolean>
+---@field window? string
+---@field on_click? fun() Open the picker.
+---@field name? string
+---@field props? table
+---@field [string] "no such property"
+
+---@param id string
+---@param opts? glass.ColorWellOpts
+---@return Node
 function M.color_well(id, opts)
     opts = opts or {}
     local height = theme.SIZES[opts.size or "regular"].height
@@ -18,6 +30,7 @@ function M.color_well(id, opts)
         size = opts.size,
         kind = "well",
         disabled = opts.disabled,
+        window = opts.window,
         on = opts.selected,
         width = 2 * height,
         padding = SWATCH_INSET,

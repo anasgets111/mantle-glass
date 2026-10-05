@@ -138,12 +138,19 @@ overlay.layer("glass_popover", function()
     }
 end)
 
--- opts: anchor (a `geometry(name)` signal), content (a node, or a function returning one),
--- edge ("bottom" default, "top", "left" or "right": which side of the anchor it opens on),
--- width (default 230).
+-- Popover: large glass with an arrow toward its anchor.
+---@class glass.PopoverOpts
+---@field anchor Signal<table> A `geometry(name)` signal.
+---@field content Node|fun(): Node
+---@field edge? "bottom"|"top"|"left"|"right" Which side of the anchor it opens on; default "bottom".
+---@field width? number Default 230.
+---@field window? string The window or panel it opens over; default `core.window`.
+---@field [string] "no such property"
+
+---@param opts glass.PopoverOpts
 function M.open_popover(opts)
     spec = opts
-    overlay.open("glass_popover")
+    overlay.open("glass_popover", nil, opts.window)
 end
 
 return M

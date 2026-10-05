@@ -59,10 +59,23 @@ local function store(opts, value, lo, hi, frac)
     end
 end
 
--- opts: value (state number, default min or neutral), min, max (default 0, 1), step, width (default
--- 140: the track is 20 px shorter), size, neutral (a value: center-biased, the fill grows from it),
--- ticks (count, evenly spaced), snap (the value snaps to the ticks), disabled, on_glass, label,
--- on_change(value). While dragging the knob grows and turns to glass.
+-- Slider. While dragging the knob grows and turns to glass.
+---@class glass.SliderOpts: glass.ControlOpts
+---@field value? StateSignal<number> Default `neutral` or `min`.
+---@field min? number Default 0.
+---@field max? number Default 1.
+---@field step? number
+---@field width? number Default 140; the track is 20 px shorter.
+---@field neutral? number Centre-biased: the fill grows from this value.
+---@field ticks? integer Evenly spaced count.
+---@field snap? boolean Snap the value to the ticks.
+---@field label? string Accessible name.
+---@field on_change? fun(value: number)
+---@field [string] "no such property"
+
+---@param id string
+---@param opts? glass.SliderOpts
+---@return Node
 function M.slider(id, opts)
     opts = opts or {}
     local s = SIZES[opts.size or "regular"]
@@ -100,7 +113,11 @@ function M.slider(id, opts)
     -- A held slider follows the pointer exactly; otherwise changes ease.
     local ease = function(extra) return held:map(function(h) return h and {} or extra end) end
 
-    local fill_color = computed({ disabled, theme.dark, theme.scheme }, function(off, dark, p)
+    local active = core.active(opts.window)
+    local fill_color = computed({ disabled, active, theme.dark, theme.scheme }, function(off, a, dark, p)
+        if not a then
+            return p[opts.on_glass and (off and "vibrant_inactive_disabled_fill" or "vibrant_inactive_fill") or off and "tertiary_fill" or "fill"]
+        end
         return off and p[dark and "quaternary_fill" or "quinary_fill"] or p[n("accent")]
     end)
     local children = {
@@ -119,7 +136,7 @@ function M.slider(id, opts)
             radius = fill:map(function(f) return f.radius end),
             hittable = false,
             background = fill_color,
-            animate = ease { translate = MOVE, width = MOVE },
+            animate = ease { translate = MOVE, width = MOVE, background = theme.motion.fade },
             children = {
                 rect(core.shape {
                     width = "fill",
@@ -183,8 +200,22 @@ function M.slider(id, opts)
     return rect(props)
 end
 
--- opts: value (state number, default min), min, max (default 0, 1), size, disabled, on_glass, label,
--- on_change(value). Drag around the dial: the grabber follows the pointer's angle.
+-- Drag around the dial: the grabber follows the pointer's angle.
+---@class glass.CircularSliderOpts
+---@field value? StateSignal<number> Default `min`.
+---@field min? number Default 0.
+---@field max? number Default 1.
+---@field step? number
+---@field size? glass.Size
+---@field disabled? boolean|Signal<boolean>
+---@field on_glass? boolean
+---@field label? string Accessible name.
+---@field on_change? fun(value: number)
+---@field [string] "no such property"
+
+---@param id string
+---@param opts? glass.CircularSliderOpts
+---@return Node
 function M.circular_slider(id, opts)
     opts = opts or {}
     local s = SIZES[opts.size or "regular"]

@@ -59,6 +59,16 @@ local TOGGLE = {
         shade = { off = { "#00000033", "#00000000", "#0000000D" }, on = { "#00000040", "#00000000", "#00000059" } } },
 }
 
+-- Inactive window: the toggle's greys (idle and disabled, off then on), by { light, dark }.
+local TOGGLE_INACTIVE = {
+    content = { idle = { { "#00000014", "#FFFFFF14" } }, disabled = { { "#0000000A", "#FFFFFF0A" } } },
+    glass = {
+        idle = { { "#0000000F", "#FFFFFF0F" }, { "#0000001C", "#FFFFFF1C" } },
+        disabled = { { "#00000008", "#FFFFFF0A" }, { "#0000000D", "#FFFFFF0D" } },
+    },
+}
+local GREYS_WHEN_INACTIVE = { toggle = true, default = true, default_destructive = true, tinted = true, destructive = true }
+
 -- `alpha` scaled by `k`.
 local function scaled(color, k)
     return theme.alpha(color, select(4, rgba(color)) * k)
@@ -76,7 +86,12 @@ end
 -- Fill (a background layer list) and label colour of a control: `kind` as in `button`, `p` the
 -- palette, `st` "idle", "held" or "disabled", `on` the toggle or colour-well selection. "plain" is
 -- the pop-up/arrow bezel (label `label`, not the vibrant grey) and "well" the colour well's capsule.
-function M.look(kind, p, dark, glass, st, on)
+-- `active` false is an inactive window: the coloured kinds go grey like the bordered bezel.
+function M.look(kind, p, dark, glass, st, on, active)
+    local inactive = active == false and GREYS_WHEN_INACTIVE[kind]
+    if inactive then
+        st = st == "disabled" and st or "idle"
+    end
     local i, mode, where = STATE[st], dark and "dark" or "light", glass and "glass" or "content"
     local vib = dark and PL or PD
     local accent, red = glass and p.vibrant_accent or p.accent, glass and p.vibrant_red or p.red
@@ -84,7 +99,14 @@ function M.look(kind, p, dark, glass, st, on)
         or (glass or not dark and kind ~= "plain") and p.vibrant_label or p.label
     local bezel = BEZEL[where][mode][i]
 
-    if kind == "well" then
+    if inactive and kind == "toggle" then
+        local set = TOGGLE_INACTIVE[where][st]
+        local tone = glass and "vibrant_" or ""
+        return layers({ { (set[on and 2 or 1] or set[1])[dark and 2 or 1], glass and vib or nil } }),
+            p[st == "disabled" and tone .. "tertiary_label" or glass and "vibrant_secondary_label" or "label"]
+    elseif inactive then
+        return layers(bezel), (kind == "destructive" or kind == "default_destructive") and not dark and st ~= "disabled" and p.label or label
+    elseif kind == "well" then
         if on and st ~= "disabled" then
             return layers({ { p.accent }, { dark and "#FFFFFF0F" or "#0000000F", vib } })
         end
@@ -134,7 +156,7 @@ end
 
 -- The control itself: a pressable, keyboard-focusable row of `content(label_colour, disabled)`.
 -- `o`: size, kind, on_glass, disabled, on (selection signal), width, padding, radius, name,
--- on_click, props (extra node props).
+-- on_click, window, props (extra node props).
 function M.control(id, o, content)
     local size = theme.SIZES[o.size or "regular"]
     local disabled = M.signal(o.disabled or false)
@@ -154,9 +176,9 @@ function M.control(id, o, content)
     }, o.props)
     local held = core.pressable(id, props)
     local focus = focus_visible("glass_focus_" .. id)
-    local look = computed({ theme.scheme, theme.dark, held, disabled, M.signal(o.on or false) },
-        function(p, dark, down, off, selected)
-            local fill, label = M.look(o.kind, p, dark, o.on_glass, off and "disabled" or down and "held" or "idle", selected)
+    local look = computed({ theme.scheme, theme.dark, held, disabled, M.signal(o.on or false), core.active(o.window) },
+        function(p, dark, down, off, selected, active)
+            local fill, label = M.look(o.kind, p, dark, o.on_glass, off and "disabled" or down and "held" or "idle", selected, active)
             return { fill = fill, label = label }
         end)
     props.background = look:map(function(l) return l.fill end)

@@ -74,12 +74,20 @@ overlay.layer("glass_notify", function(data)
     }
 end)
 
--- opts: title, body, icon? (a Lucide name; default "bell"), app? (the caption at the right;
--- default "now").
-function M.notify(opts)
+-- Banner at the window's top right; dismisses after a few seconds or on click.
+---@class glass.NotificationOpts
+---@field title? string
+---@field body? string
+---@field icon? string Lucide name; default "bell".
+---@field app? string The caption at the right; default "now".
+---@field window? string The window or panel it opens over; default `core.window`.
+---@field [string] "no such property"
+
+---@param opts glass.NotificationOpts
+function M.open_notification(opts)
     serial = serial + 1
     local mine = serial
-    overlay.open("glass_notify", opts)
+    overlay.open("glass_notify", opts, opts.window)
     timer(BANNER.seconds * 1000, function()
         if mine == serial then
             overlay.close("glass_notify")
