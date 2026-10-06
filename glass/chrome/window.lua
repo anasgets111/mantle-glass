@@ -574,9 +574,10 @@ end
 ---@class glass.AppWindowProps: WindowProps, glass.WindowFrameProps
 ---@field preview? nil
 
+-- What `app_window` gives `window`: one app built with either library can host both in one surface.
 ---@param props glass.AppWindowProps
----@return Surface
-function M.app_window(props)
+---@return WindowProps
+function M.window_props(props)
     local own = {}
     for k, v in pairs(props) do
         if not CHROME_PROPS[k] then
@@ -587,7 +588,7 @@ function M.app_window(props)
     local grips = resize_grips(id)
     table.insert(grips, 1, M.window_frame(props))
     local inset = toplevel(id):state():map(function(s) return band(s, props.kind == "utility" and UTILITY_BAND or BAND) end)
-    return window(merge({
+    return merge({
         background = CLEAR,
         decorations = "client",
         geometry_inset = inset,
@@ -599,7 +600,13 @@ function M.app_window(props)
             padding = inset,
             children = { rect { width = "fill", height = "fill", children = grips } },
         },
-    }, own))
+    }, own)
+end
+
+---@param props glass.AppWindowProps
+---@return Surface
+function M.app_window(props)
+    return window(M.window_props(props))
 end
 
 -- A utility panel: `app_window` with `kind = "utility"` (280 wide in the kit).

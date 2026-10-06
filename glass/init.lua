@@ -14,6 +14,7 @@ return {
     focusable = require("glass.core").focusable,
     -- Chrome
     app_window = require("glass.chrome.window").app_window,
+    window_props = require("glass.chrome.window").window_props,
     traffic_lights = require("glass.chrome.toolbar").traffic_lights,
     toolbar_group = require("glass.chrome.toolbar").toolbar_group,
     toolbar_button = require("glass.chrome.toolbar").toolbar_button,
