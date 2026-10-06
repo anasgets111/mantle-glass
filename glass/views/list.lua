@@ -23,6 +23,8 @@ local M = {}
 ---@field value? StateSignal<string> The selected key.
 ---@field alternating? boolean Tint every other row.
 ---@field max_height? number Default 320; longer lists scroll.
+---@field width? number|"fill" Default "fill".
+---@field height? number|"fill" A fixed height instead of growing to `max_height`.
 ---@field on_select? fun(item: any)
 ---@field window? string
 ---@field [string] "no such property"
@@ -61,7 +63,8 @@ function M.list(id, opts)
     local offset, view = scroll("glass_list_" .. id), geometry("glass_list_" .. id)
     local list_node = list {
         width = "fill",
-        max_height = opts.max_height or ROW.max_height,
+        height = opts.height and "fill",
+        max_height = opts.height and nil or opts.max_height or ROW.max_height,
         padding = { left = ROW.inset, right = ROW.inset },
         scroll = offset,
         animate = { scroll = scroller.ease("list_" .. id) },
@@ -96,7 +99,8 @@ function M.list(id, opts)
         end,
     }
     return rect {
-        width = "fill",
+        width = opts.width or "fill",
+        height = opts.height,
         children = { list_node, knob("list_" .. id, offset, view, indexed:map(function(all) return #all * ROW.height end)) },
     }
 end

@@ -10,10 +10,10 @@ local c = theme.c
 -- Per size, from the kit: master height, track height and y, knob w x h, ticked knob w x h and
 -- radius, tick row y; dial diameter and grabber y, w, h.
 local SIZES = {
-    mini = { h = 16, th = 4, ty = 6, kw = 16, kh = 12, tw = 8, tkh = 16, tkr = 6, tick = 12, dial = 16, gy = 2, gw = 2, gh = 4 },
-    small = { h = 20, th = 4, ty = 8, kw = 18, kh = 14, tw = 10, tkh = 18, tkr = 7, tick = 15, dial = 20, gy = 2.5, gw = 2, gh = 5 },
-    regular = { h = 24, th = 6, ty = 9, kw = 20, kh = 16, tw = 20, tkh = 16, tkr = 7, tick = 18, dial = 24, gy = 3, gw = 2, gh = 6 },
-    large = { h = 28, th = 6, ty = 11, kw = 24, kh = 20, tw = 24, tkh = 20, tkr = 7, tick = 20, dial = 28, gy = 3, gw = 2, gh = 6 },
+    xs = { h = 16, th = 4, ty = 6, kw = 16, kh = 12, tw = 8, tkh = 16, tkr = 6, tick = 12, dial = 16, gy = 2, gw = 2, gh = 4 },
+    s = { h = 20, th = 4, ty = 8, kw = 18, kh = 14, tw = 10, tkh = 18, tkr = 7, tick = 15, dial = 20, gy = 2.5, gw = 2, gh = 5 },
+    m = { h = 24, th = 6, ty = 9, kw = 20, kh = 16, tw = 20, tkh = 16, tkr = 7, tick = 18, dial = 24, gy = 3, gw = 2, gh = 6 },
+    l = { h = 28, th = 6, ty = 11, kw = 24, kh = 20, tw = 24, tkh = 20, tkr = 7, tick = 20, dial = 28, gy = 3, gw = 2, gh = 6 },
     xl = { h = 36, th = 6, ty = 15, kw = 24, kh = 20, tw = 24, tkh = 20, tkr = 7, tick = 25, dial = 36, gy = 3, gw = 2, gh = 7 },
 }
 local INSET = 10 -- the track starts 10 px in: room for the knob to overhang
@@ -36,7 +36,7 @@ local function draggable(id, opts, props, seek)
     ---@type StateSignal<boolean>
     local held = state("glass_held_sl_" .. id, false)
     local disabled = tg.sig(opts.disabled)
-    props.accessible_name = opts.label or id
+    props.accessible_name = opts.name or type(opts.label) == "string" and opts.label or id
     props.hittable = disabled:map(function(d) return not d end)
     props.on_drag = function(_, pointer, phase)
         held:set(phase ~= "end")
@@ -71,7 +71,8 @@ end
 ---@field neutral? number Centre-biased: the fill grows from this value.
 ---@field ticks? integer Evenly spaced count.
 ---@field snap? boolean Snap the value to the ticks.
----@field label? string Accessible name.
+---@field label? string|Signal<string> Text beside the slider (above it when `vertical`).
+---@field name? string Accessible name; default the label.
 ---@field on_change? fun(value: number)
 ---@field [string] "no such property"
 
@@ -80,7 +81,7 @@ end
 ---@return Node
 function M.slider(id, opts)
     opts = opts or {}
-    local s = SIZES[opts.size or "regular"]
+    local s = SIZES[opts.size or "m"]
     local n = tg.role(opts)
     local lo, hi = opts.min or 0, opts.max or 1
     local vert = opts.vertical
@@ -219,7 +220,7 @@ function M.slider(id, opts)
         },
     }
     props.children = children
-    return rect(props)
+    return tg.labelled(rect(props), opts, vert)
 end
 
 -- Drag around the dial: the grabber follows the pointer's angle.
@@ -231,7 +232,7 @@ end
 ---@field size? glass.Size
 ---@field disabled? boolean|Signal<boolean>
 ---@field on_glass? boolean
----@field label? string Accessible name.
+---@field name? string Accessible name.
 ---@field on_change? fun(value: number)
 ---@field [string] "no such property"
 
@@ -240,7 +241,7 @@ end
 ---@return Node
 function M.circular_slider(id, opts)
     opts = opts or {}
-    local s = SIZES[opts.size or "regular"]
+    local s = SIZES[opts.size or "m"]
     local n = tg.role(opts)
     local lo, hi = opts.min or 0, opts.max or 1
     local D = s.dial

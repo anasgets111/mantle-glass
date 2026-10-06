@@ -137,7 +137,8 @@ end)
 
 -- Popover: large glass with an arrow toward its anchor.
 ---@class glass.PopoverOpts
----@field anchor Signal<table> A `geometry(name)` signal.
+---@field anchor? Signal<table> A `geometry(name)` signal.
+---@field at? { x: number, y: number } A point in the host's coordinates instead of `anchor`.
 ---@field content Node|fun(): Node
 ---@field edge? "bottom"|"top"|"left"|"right" Which side of the anchor it opens on, default "bottom"; it flips to the opposite side when only that fits in the window, and slides to stay inside it.
 ---@field width? number Default 230.
@@ -146,7 +147,8 @@ end)
 
 ---@param opts glass.PopoverOpts
 function M.open_popover(opts)
-    spec = opts
+    local at = opts.at
+    spec = at and core.merge(core.merge({}, opts), { anchor = theme.dark:map(function() return { x = at.x, y = at.y, width = 0, height = 0 } end) }) or opts
     overlay.open("glass_popover", nil, opts.window)
 end
 

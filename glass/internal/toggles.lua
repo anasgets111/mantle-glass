@@ -2,6 +2,7 @@
 -- plain values, the role set for glass, the focus ring, the pressed tint and the click wiring.
 local theme = require("glass.theme")
 local core = require("glass.core")
+local material = require("glass.material")
 
 local M = {}
 
@@ -13,6 +14,21 @@ end
 -- `opts.on_glass` picks the kit's "Over-glass" colours: `n("fill")` names the role to read.
 function M.role(opts)
     return function(name) return opts.on_glass and "vibrant_" .. name or name end
+end
+
+-- Label text styles per control size.
+local LABEL_STYLE = { xs = "control_mini", s = "control_small", m = "control", l = "control", xl = "control" }
+
+-- `node` with `opts.label` beside it (above when `column`), in the control's text style; `node` itself without one.
+function M.labelled(node, opts, column_)
+    if not opts.label then
+        return node
+    end
+    local n, disabled = M.role(opts), M.sig(opts.disabled)
+    local text = core.text(opts.label, computed({ disabled, theme.scheme }, function(d, p)
+        return p[d and n("tertiary_label") or "vibrant_label"]
+    end), LABEL_STYLE[opts.size or "m"], material.vibrant({}))
+    return (column_ and column or row) { spacing = 8, align_h = column_ and "center" or nil, align_v = "center", children = { text, node } }
 end
 
 -- `role` at `alpha`, live: the pressed fill of an unchecked control (white on dark, black on light).

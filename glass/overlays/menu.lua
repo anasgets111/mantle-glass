@@ -106,10 +106,11 @@ local function item_row(level, i, item, columns, active, open, on_enter)
     local fg = live and theme.pick(active, "on_accent", "vibrant_label") or c.vibrant_tertiary_label
     local kids = {}
     if columns.check then
+        local checked = type(item.checked) == "userdata" and item.checked:map(function(on) return on and 1 or 0 end) or item.checked and 1 or 0
         kids[#kids + 1] = rect {
             width = MENU.check,
             height = MENU.row,
-            children = { icon("check", fg, 13, material.vibrant({ align_v = "center", opacity = item.checked and 1 or 0 })) },
+            children = { icon("check", fg, 13, material.vibrant({ align_v = "center", opacity = checked })) },
         }
     end
     if columns.icon then
@@ -324,13 +325,13 @@ end, {
 ---@field label? string
 ---@field icon? string
 ---@field shortcut? string
----@field checked? boolean
+---@field checked? boolean|Signal<boolean>
 ---@field disabled? boolean
 ---@field submenu? glass.MenuItem[]
 ---@field on_click? fun()
 ---@field separator? boolean
 ---@field header? string
----@field value? any Opaque to the menu; `popup_button` compares it with its `value`, default the label.
+---@field value? any Opaque to the menu; `dropdown` compares it with its `value`, default the label.
 ---@field [string] "no such property"
 
 ---@class glass.MenuOpts
@@ -391,7 +392,7 @@ end
 
 -- The row the open menu highlights, or nil: for an opener whose own keys steer the menu.
 ---@return glass.MenuItem?
-function M.highlighted()
+function M.menu_highlighted()
     return current()
 end
 

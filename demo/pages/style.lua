@@ -9,11 +9,11 @@ local c = theme.c
 local SYSTEM = { "red", "orange", "yellow", "green", "mint", "teal", "cyan", "blue", "indigo", "purple", "pink", "brown", "gray" }
 local TYPES = { "large_title", "title1", "title2", "title3", "headline", "body", "callout", "subheadline", "footnote",
     "caption1", "caption2", "control", "control_small", "control_mini", "window_title", "sidebar_title" }
-local SIZES = { "mini", "small", "regular", "large", "xl" }
+local SIZES = { "xs", "s", "m", "l", "xl" }
 
 local function swatch(role, name)
     return column { spacing = 4, width = 56, children = {
-        rect(glass.shape { width = 56, height = 36, radius = 8, background = c[role] }),
+        rect(glass.core.shape { width = 56, height = 36, radius = 8, background = c[role] }),
         glass.text(name, c.secondary_label, "caption1"),
     } }
 end
@@ -38,7 +38,7 @@ local ROLES = {
 local function role_cell(role)
     local is_label = role:find("label")
     return column { spacing = 4, width = 120, children = {
-        rect(glass.shape { width = 120, height = 44, radius = 8, background = is_label and c.fill or c[role], children = {
+        rect(glass.core.shape { width = 120, height = 44, radius = 8, background = is_label and c.fill or c[role], children = {
             is_label and glass.text("Aa", c[role], "title1", { align_h = "center" }) or nil,
         } }),
         glass.text(role, c.secondary_label, "caption1"),
@@ -55,7 +55,7 @@ roles[#roles + 1] = rect { width = "fill", height = 1, background = c.separator 
 
 local function accent_dot(name)
     local picked = theme.accent_name:map(function(a) return a == name end)
-    return rect(glass.shape {
+    return rect(glass.core.shape {
         width = 24,
         height = 24,
         radius = theme.CAPSULE,
@@ -89,7 +89,7 @@ local function size_row(name)
     return row { spacing = 16, height = 40, align_v = "center", children = {
         glass.text(name, c.label, "control", { width = 60 }),
         glass.text(string.format("h %d  r %s  %s  inset %d  icon %d", s.height, radius, s.label, s.inset, s.icon), c.secondary_label, "body", { width = 300 }),
-        glass.button("size_" .. name, { size = name, kind = "default", label = "Button", icon = "plus", props = { align_v = "center" } }),
+        glass.button("size_" .. name, { size = name, kind = "primary", label = "Button", icon = "plus", props = { align_v = "center" } }),
         glass.button("size_icon_" .. name, { size = name, icon = "plus", props = { align_v = "center" } }),
     } }
 end

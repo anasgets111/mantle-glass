@@ -65,7 +65,7 @@ end
 
 -- `children` over the wallpaper, for controls that sit on glass.
 function M.on_wall(children, height)
-    return rect(glass.shape {
+    return rect(glass.core.shape {
         width = "fill",
         height = height or 160,
         radius = 12,

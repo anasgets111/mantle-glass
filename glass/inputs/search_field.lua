@@ -11,20 +11,20 @@ local M = {}
 -- Magnifier x, text x, magnifier glyph and clear button's right inset, per size. The toolbar
 -- variant is 24 or 36 tall and sets them by foundations.md 4.3.
 local SIZES = {
-    mini = { 6, 26, 11, 2 },
-    small = { 6, 30, 12.2, 2.5 },
-    regular = { 8, 32, 12.2, 4 },
-    large = { 8, 32, 12.2, 6 },
+    xs = { 6, 26, 11, 2 },
+    s = { 6, 30, 12.2, 2.5 },
+    m = { 8, 32, 12.2, 4 },
+    l = { 8, 32, 12.2, 6 },
     xl = { 10, 34, 12.2, 8 },
 }
 local TOOLBAR = {
-    regular = { 6, 26, 13, 6, 149 },
+    m = { 6, 26, 13, 6, 149 },
     xl = { 10, 32, 13, 10, 159 },
 }
 
 -- Search field: a capsule with a magnifier, a clear button once it holds text.
 ---@class glass.SearchFieldOpts: glass.TextFieldOpts
----@field toolbar? boolean Sits on small glass in a toolbar; `size` "regular" or "xl".
+---@field toolbar? boolean Sits on small glass in a toolbar; `size` "m" or "xl".
 ---@field [string] "no such property"
 
 ---@param id string
@@ -32,7 +32,7 @@ local TOOLBAR = {
 ---@return Node, glass.FieldHandle
 function M.search_field(id, opts)
     opts = opts or {}
-    local size = opts.size or "regular"
+    local size = opts.size or "m"
     local g = opts.toolbar and TOOLBAR[size] or SIZES[size]
     local input, handle = fields.input(id, core.merge({
         escape = "clear",
@@ -57,6 +57,7 @@ function M.search_field(id, opts)
         disabled = opts.disabled,
         focus = handle.focus,
         glass = opts.toolbar,
+        label = opts.label,
         props = opts.props,
     }, {
         rect { width = g[2] - g[1], height = "fill", children = {

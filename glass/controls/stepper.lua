@@ -9,10 +9,10 @@ local c, FADE = theme.c, theme.motion.fade
 
 -- Per size: width, height, radius, hairline inset, glyph size.
 local SIZES = {
-    mini = { w = 13, h = 16, radius = 4, inset = 2, glyph = 9 },
-    small = { w = 17, h = 20, radius = 5, inset = 3, glyph = 11 },
-    regular = { w = 20, h = 24, radius = 6, inset = 3, glyph = 13 },
-    large = { w = 23, h = 28, radius = 7, inset = 4, glyph = 13 },
+    xs = { w = 13, h = 16, radius = 4, inset = 2, glyph = 9 },
+    s = { w = 17, h = 20, radius = 5, inset = 3, glyph = 11 },
+    m = { w = 20, h = 24, radius = 6, inset = 3, glyph = 13 },
+    l = { w = 23, h = 28, radius = 7, inset = 4, glyph = 13 },
     xl = { w = 30, h = 36, radius = 9, inset = 5, glyph = 13 },
 }
 
@@ -35,7 +35,7 @@ local M = {}
 ---@return Node
 function M.stepper(id, opts)
     opts = opts or {}
-    local s = SIZES[opts.size or "regular"]
+    local s = SIZES[opts.size or "m"]
     local n = tg.role(opts)
     local lo, hi, step = opts.min or -math.huge, opts.max or math.huge, opts.step or 1
     ---@type StateSignal<number>

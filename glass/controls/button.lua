@@ -1,4 +1,4 @@
--- Liquid Glass push buttons and the arrow button, from the kit.
+-- Liquid Glass push buttons, the icon button and the arrow button, from the kit.
 local theme = require("glass.theme")
 local core = require("glass.core")
 local buttons = require("glass.internal.buttons")
@@ -9,11 +9,12 @@ local M = {}
 
 -- Push button.
 ---@class glass.ButtonOpts: glass.ControlOpts
----@field kind? "bordered"|"default"|"destructive"|"default_destructive"|"tinted"|"borderless"|"toggle" Default "bordered".
+---@field kind? "primary"|"secondary"|"plain"|"destructive"|"tinted"|"default_destructive"|"toggle" Default "secondary".
 ---@field label? string|Signal<string>
----@field icon? string|Signal<string> Leading Lucide name; alone makes a square.
----@field value? StateSignal<boolean> Selected state; a `toggle` keeps its own if omitted.
----@field on_click? fun()
+---@field icon? string|Signal<string> Leading shared icon name or Lucide name; alone makes a square.
+---@field value? StateSignal<boolean> Makes it a toggle: a click flips it. A `toggle` kind keeps its own state if omitted.
+---@field width? number Fixed width.
+---@field on_click? fun() Called after the toggle flips.
 ---@field name? string Accessible name; default the label, else the icon.
 ---@field props? table Extra node props.
 ---@field [string] "no such property"
@@ -23,10 +24,10 @@ local M = {}
 ---@return Node
 function M.button(id, opts)
     opts = opts or {}
-    local kind, size = opts.kind or "bordered", theme.SIZES[opts.size or "regular"]
+    local kind, size = opts.kind or "secondary", theme.SIZES[opts.size or "m"]
     local on_click = opts.on_click
     local value = opts.value
-    if kind == "toggle" then
+    if kind == "toggle" or value then
         value = value or state("glass_toggle_" .. id, false)
         on_click = function()
             value:set(not value:get())
@@ -44,10 +45,10 @@ function M.button(id, opts)
         disabled = opts.disabled,
         on = value,
         -- not in the kit: an icon-only push button is a square of the control's height
-        width = icon_only and size.height or nil,
+        width = opts.width or icon_only and size.height or nil,
         padding = not icon_only and { left = size.inset, right = size.inset } or nil,
         -- not in the kit: Regular destructive is 5; every other size follows the sizes table
-        radius = kind == "destructive" and (opts.size or "regular") == "regular" and 5 or nil,
+        radius = kind == "destructive" and (opts.size or "m") == "m" and 5 or nil,
         name = opts.name or (type(opts.label) == "string" and opts.label) or opts.icon,
         on_click = on_click,
         -- not in the kit: 4 px between glyph and label (the kit's label starts with an SF symbol and a space)
@@ -65,6 +66,24 @@ function M.button(id, opts)
     end)
 end
 
+-- Icon button: a button with a glyph and no label, a square of the control's height.
+---@class glass.IconButtonOpts: glass.ControlOpts
+---@field kind? "primary"|"secondary"|"plain"|"destructive"|"tinted"|"default_destructive"|"toggle" Default "secondary".
+---@field icon string|Signal<string> A shared icon name or a Lucide name.
+---@field value? StateSignal<boolean> Makes it a toggle: a click flips it.
+---@field width? number Fixed width; default the control's height, a square.
+---@field name? string Accessible name; default the icon.
+---@field on_click? fun() Called after the toggle flips.
+---@field props? table Extra node props.
+---@field [string] "no such property"
+
+---@param id string
+---@param opts glass.IconButtonOpts
+---@return Node
+function M.icon_button(id, opts)
+    return M.button(id, core.merge(core.merge({}, opts), { label = false }))
+end
+
 -- Arrow button: the kit's icon-only capsule, a chevron.up.chevron.down square of the control's
 -- height.
 ---@class glass.ArrowButtonOpts: glass.ControlOpts
@@ -79,10 +98,10 @@ end
 ---@return Node
 function M.arrow_button(id, opts)
     opts = opts or {}
-    local size = theme.SIZES[opts.size or "regular"]
+    local size = theme.SIZES[opts.size or "m"]
     return buttons.control(id, {
         size = opts.size,
-        kind = "plain",
+        kind = "bezel",
         on_glass = opts.on_glass,
         disabled = opts.disabled,
         window = opts.window,
@@ -92,9 +111,9 @@ function M.arrow_button(id, opts)
         on_click = opts.on_click,
         props = opts.props,
     }, function(label)
-        local vib = buttons.vibrant({ kind = "plain", on_glass = opts.on_glass })
+        local vib = buttons.vibrant({ kind = "bezel", on_glass = opts.on_glass })
         return { rect { width = size.height, height = size.height, children = {
-            icon(opts.icon or "chevrons-up-down", label, opts.size == "mini" and 11 or 13, core.merge({ align_h = "center" }, vib)),
+            icon(opts.icon or "chevrons-up-down", label, opts.size == "xs" and 11 or 13, core.merge({ align_h = "center" }, vib)),
         } } }
     end)
 end

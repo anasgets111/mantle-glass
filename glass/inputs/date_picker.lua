@@ -212,12 +212,12 @@ function M.calendar(id, opts)
         children = {
             row { width = "fill", align_v = "center", spacing = 2, padding = { left = 4 }, children = {
                 core.text(view:map(function(v) return MONTHS[v.month] .. " " .. v.year end), c.label, "headline", { width = "fill" }),
-                button(id .. "_prev", { icon = "chevron-left", kind = "borderless", size = "small", disabled = disabled, window = opts.window, name = "Previous month", on_click = function() shift(-1) end }),
-                button(id .. "_today", { label = "Today", kind = "borderless", size = "small", disabled = disabled, window = opts.window, on_click = function()
+                button(id .. "_prev", { icon = "chevron-left", kind = "plain", size = "s", disabled = disabled, window = opts.window, name = "Previous month", on_click = function() shift(-1) end }),
+                button(id .. "_today", { label = "Today", kind = "plain", size = "s", disabled = disabled, window = opts.window, on_click = function()
                     local t = now()
                     pick(t.year, t.month, t.day)
                 end }),
-                button(id .. "_next", { icon = "chevron-right", kind = "borderless", size = "small", disabled = disabled, window = opts.window, name = "Next month", on_click = function() shift(1) end }),
+                button(id .. "_next", { icon = "chevron-right", kind = "plain", size = "s", disabled = disabled, window = opts.window, name = "Next month", on_click = function() shift(1) end }),
             } },
             row { children = heads },
             column { children = weeks },
@@ -232,6 +232,8 @@ end
 ---@field style? "textual"|"popover" Default "textual".
 ---@field size? glass.Size
 ---@field disabled? boolean|Signal<boolean>
+---@field label? string|Signal<string> Text above the picker.
+---@field name? string Accessible name; default the label.
 ---@field window? string
 ---@field on_change? fun(value: glass.Date)
 ---@field [string] "no such property"
@@ -239,9 +241,9 @@ end
 ---@param id string
 ---@param opts? glass.DatePickerOpts
 ---@return Node
-function M.date_picker(id, opts)
+local function date_picker(id, opts)
     opts = opts or {}
-    local size = opts.size or "regular"
+    local size = opts.size or "m"
     local inset = fields.SIZES[size].inset
     local kind = fields.SIZES[size].type
     local time = opts.time
@@ -281,7 +283,7 @@ function M.date_picker(id, opts)
                     end,
                 }
             end,
-            props = { accessible_name = id, spacing = 6 },
+            props = { accessible_name = opts.name or id, spacing = 6 },
         }, {
             core.text(label, tone("label", "tertiary_label"), kind),
             core.icon("calendar", tone("secondary_label", "tertiary_label"), 13),
@@ -416,6 +418,18 @@ function M.date_picker(id, opts)
             end,
         }),
     } }
+end
+
+---@param id string
+---@param opts? glass.DatePickerOpts
+---@return Node
+function M.date_picker(id, opts)
+    opts = opts or {}
+    local node = date_picker(id, opts)
+    if not opts.label then
+        return node
+    end
+    return column { spacing = 4, children = { core.text(opts.label, theme.c.label, fields.SIZES[opts.size or "m"].type), node } }
 end
 
 return M

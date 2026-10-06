@@ -5,10 +5,10 @@ local core = require("glass.core")
 local material = require("glass.material")
 local tg = require("glass.internal.toggles")
 
-local BAR_HEIGHT = { small = 6, regular = 10 }
+local BAR_HEIGHT = { s = 6, m = 10 }
 -- Ring: outer diameter and ring width. Spinner: box, spoke width and length.
-local RING = { small = { d = 16, w = 5 }, regular = { d = 32, w = 5 } }
-local SPINNER = { small = { d = 16, w = 2, l = 5 }, regular = { d = 32, w = 4, l = 10 } }
+local RING = { s = { d = 16, w = 5 }, m = { d = 32, w = 5 } }
+local SPINNER = { s = { d = 16, w = 2, l = 5 }, m = { d = 32, w = 4, l = 10 } }
 -- Spinner alpha of spokes 1..8; spoke 1 is the lead, at the top, and the rest go clockwise.
 local SPOKES = { 0.55, 0.06, 0.13, 0.20, 0.27, 0.34, 0.41, 0.48 }
 -- not in the kit: the motion of the indeterminate bar and the spinner (kit has none)
@@ -39,9 +39,10 @@ end
 ---@class glass.ProgressBarOpts
 ---@field value? number|Signal<number> 0..1.
 ---@field indeterminate? boolean|Signal<boolean> A moving gradient fill.
----@field size? "small"|"regular" 6 or 10 px.
+---@field size? "s"|"m" 6 or 10 px.
 ---@field width? number Default 140.
 ---@field on_glass? boolean
+---@field name? string Accessible name; default "progress" ("loading" for the spinner).
 ---@field window? string
 ---@field [string] "no such property"
 
@@ -50,7 +51,7 @@ end
 ---@return Node
 function M.progress_bar(_, opts)
     opts = opts or {}
-    local h = BAR_HEIGHT[opts.size or "regular"]
+    local h = BAR_HEIGHT[opts.size or "m"]
     local W = opts.width or 140
     local indeterminate = tg.sig(opts.indeterminate or false)
     local fill = fill_color(opts)
@@ -70,7 +71,7 @@ function M.progress_bar(_, opts)
         background = wash(0.06, 0.08),
         border_width = 0.5,
         border_color = wash(0.07, 0.04),
-        accessible_name = "progress",
+        accessible_name = opts.name or "progress",
         children = {
             bar {
                 width = fraction(opts):map(function(f) return f * W end),
@@ -91,8 +92,9 @@ end
 
 ---@class glass.ProgressRingOpts
 ---@field value? number|Signal<number> 0..1.
----@field size? "small"|"regular" 16 or 32 px.
+---@field size? "s"|"m" 16 or 32 px.
 ---@field on_glass? boolean
+---@field name? string Accessible name; default "progress" ("loading" for the spinner).
 ---@field window? string
 ---@field [string] "no such property"
 
@@ -101,7 +103,7 @@ end
 ---@return Node
 function M.progress_ring(_, opts)
     opts = opts or {}
-    local s = RING[opts.size or "regular"]
+    local s = RING[opts.size or "m"]
     local r = (s.d - s.w) / 2
     local commands = { { op = "A", points = { s.d / 2, s.d / 2, r, -90, 360 } } }
     local function arc(extra)
@@ -114,7 +116,7 @@ function M.progress_ring(_, opts)
     return rect {
         width = s.d,
         height = s.d,
-        accessible_name = "progress",
+        accessible_name = opts.name or "progress",
         children = {
             arc { stroke = wash(0.06, 0.08) },
             arc {
@@ -129,7 +131,8 @@ end
 
 -- The lead spoke steps round the circle clockwise.
 ---@class glass.SpinnerOpts
----@field size? "small"|"regular" 16 or 32 px.
+---@field size? "s"|"m" 16 or 32 px.
+---@field name? string Accessible name; default "progress" ("loading" for the spinner).
 ---@field window? string
 ---@field [string] "no such property"
 
@@ -138,7 +141,7 @@ end
 ---@return Node
 function M.spinner(_, opts)
     opts = opts or {}
-    local s = SPINNER[opts.size or "regular"]
+    local s = SPINNER[opts.size or "m"]
     local spokes = {}
     for i, alpha in ipairs(SPOKES) do
         spokes[i] = rect {
@@ -159,7 +162,7 @@ function M.spinner(_, opts)
     return rect {
         width = s.d,
         height = s.d,
-        accessible_name = "loading",
+        accessible_name = opts.name or "loading",
         opacity = core.active(opts.window):map(function(a) return a and 1 or 0.5 end),
         animate = { rotate = SPIN, opacity = theme.motion.fade },
         children = spokes,

@@ -33,7 +33,7 @@ local M = {}
 ---@return Node
 function M.token_field(id, opts)
     opts = opts or {}
-    local size = opts.size or "regular"
+    local size = opts.size or "m"
     local s, g = fields.SIZES[size], theme.SIZES[size]
     local chip = g.height - TOKEN.shrink
     local value = opts.value or state("glass_tokens_" .. id, {})

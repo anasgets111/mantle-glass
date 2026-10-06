@@ -19,7 +19,7 @@ local HOP = { duration = 260, easing = "out_quad", loops = "infinite", keyframes
 
 ---@class glass.MenuBarMenu
 ---@field title? string
----@field icon? string Lucide name, for the leading system menu.
+---@field icon? string A shared icon name or a Lucide name, for the leading system menu.
 ---@field bold? boolean The app's own name, as native apps set it.
 ---@field items glass.MenuItem[]
 ---@field [string] "no such property"
@@ -102,7 +102,7 @@ end
 
 ---@class glass.DockItem
 ---@field label? string Shown above the icon on hover.
----@field icon? string Lucide glyph on a coloured tile, standing in for an app icon.
+---@field icon? string A shared icon name or a Lucide name on a coloured tile, standing in for an app icon.
 ---@field color? string A `theme.SYSTEM` name for the tile; default "blue".
 ---@field image? string An app icon's path instead of the tile.
 ---@field running? boolean|Signal<boolean> Draws the dot under it.

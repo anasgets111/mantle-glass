@@ -10,10 +10,10 @@ local M = {}
 
 -- Text fields per size: corner radius, text size and text inset (heights are `theme.SIZES`).
 M.SIZES = {
-    mini = { radius = 4, font = 10, inset = 6, type = "control_mini" },
-    small = { radius = 5, font = 11, inset = 6, type = "control_small" },
-    regular = { radius = 6, font = 13, inset = 6, type = "control" },
-    large = { radius = 7, font = 13, inset = 8, type = "control" },
+    xs = { radius = 4, font = 10, inset = 6, type = "control_mini" },
+    s = { radius = 5, font = 11, inset = 6, type = "control_small" },
+    m = { radius = 6, font = 13, inset = 6, type = "control" },
+    l = { radius = 7, font = 13, inset = 8, type = "control" },
     xl = { radius = 9, font = 13, inset = 10, type = "control" },
 }
 
@@ -25,9 +25,9 @@ local ROLES = {
 
 -- The engine textfield. o: size, value (state), placeholder, disabled, max_length, vibrant, name,
 -- on_change, on_submit, and for several lines multiline, min_lines, max_lines, submit_key.
--- Returns the node and { value, focus() }.
+-- Returns the node and { value, focus, clear, set }.
 function M.input(id, o)
-    local style = theme.type[M.SIZES[o.size or "regular"].type]
+    local style = theme.type[M.SIZES[o.size or "m"].type]
     local name = "glass_field_" .. id
     local value = o.value or state(name, "")
     local target = focus_target(name)
@@ -54,7 +54,7 @@ function M.input(id, o)
         max_lines = o.max_lines,
         submit_key = o.submit_key,
         font = theme.FONT,
-        font_size = M.SIZES[o.size or "regular"].font,
+        font_size = M.SIZES[o.size or "m"].font,
         font_weight = style[2],
         letter_spacing = style[4],
         line_height = o.multiline and style[3] / style[1] or nil,
@@ -73,7 +73,7 @@ function M.input(id, o)
         initial_text = value,
         disabled = disabled,
         max_length = o.max_length,
-        accessible_name = o.name or o.placeholder or id,
+        accessible_name = o.name or type(o.label) == "string" and o.label or o.placeholder or id,
         focus_ring = false,
         focus_target = target,
         -- The native Edit menu on a right click; Cut and Copy need a selection.
@@ -123,17 +123,18 @@ function M.input(id, o)
             target:set_text(t)
         end,
     }
-    return node, { value = value, focus = function() target:request() end }
+    local function set(text) value:set(text) end
+    return node, { value = value, focus = function() target:request() end, clear = function() set("") end, set = set }
 end
 
 -- The input box: a row of `children` with the kit's fill, 1 px outside border and focus ring (3.5
 -- px outside and 1 px inside, accent at 50%). o: size, width, padding, disabled, focus (the
 -- `focus` of `input`), glass (sits on `material.glass("small")`: the toolbar search), geometry,
--- grow (the height follows a multiline field instead of the control size).
+-- grow (the height follows a multiline field instead of the control size), label (text above the box).
 function M.box(id, o, children)
     local disabled = buttons.signal(o.disabled or false)
     local focus = focused("glass_focus_" .. id)
-    local size = o.size or "regular"
+    local size = o.size or "m"
     local props = {
         id = id,
         width = o.width,
@@ -165,7 +166,12 @@ function M.box(id, o, children)
             return on and ring(p) or { { color = off and "#0000000A" or p.input_border, spread = 1 } }
         end)
     end
-    return row(core.shape(core.merge(props, o.props)))
+    local box = row(core.shape(core.merge(props, o.props)))
+    if not o.label then
+        return box
+    end
+    local label = core.text(o.label, o.glass and theme.c.vibrant_label or theme.c.label, M.SIZES[size].type)
+    return column { width = o.width, spacing = 4, children = { label, box } }
 end
 
 return M

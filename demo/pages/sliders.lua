@@ -19,7 +19,7 @@ local function slider(caption, id, opts)
     return labelled(caption, glass.slider(id, opts), 10)
 end
 
-local SIZES = { "mini", "small", "regular", "large", "xl" }
+local SIZES = { "xs", "s", "m", "l", "xl" }
 
 local function line(children) return row { spacing = 16, align_v = "center", children = children } end
 local function top(children) return row { spacing = 16, align_v = "start", children = children } end
@@ -45,11 +45,11 @@ local size_sliders = each(SIZES, function(size)
     return slider(size, "sl_" .. size, { size = size, value = state("demo_sliders_" .. size, 0.5) })
 end)
 
-local dials = each({ "small", "regular", "large" }, function(size)
+local dials = each({ "s", "m", "l" }, function(size)
     return labelled(size, glass.circular_slider("dial_" .. size, { size = size, value = state("demo_sliders_dial_" .. size, 0.5) }))
 end)
 
-local bars = each({ "small", "regular" }, function(size)
+local bars = each({ "s", "m" }, function(size)
     return labelled(size, glass.progress_bar("bar_" .. size, { size = size, value = bar }))
 end)
 
@@ -63,7 +63,7 @@ return section.page {
     } }),
     section.section("Slider sizes", "Mini to extra large.", top(size_sliders)),
     section.section("Circular slider", "Drag around the dial.", top({
-        labelled("regular", glass.circular_slider("dial", { value = dial })),
+        labelled("m", glass.circular_slider("dial", { value = dial })),
         labelled("value", readout(dial)),
         table.unpack(dials),
     })),
@@ -72,14 +72,14 @@ return section.page {
         top(bars),
         top({
             labelled("indeterminate", glass.progress_bar("bar_ind", { indeterminate = true })),
-            labelled("indeterminate, small", glass.progress_bar("bar_ind_s", { indeterminate = true, size = "small" })),
+            labelled("indeterminate, small", glass.progress_bar("bar_ind_s", { indeterminate = true, size = "s" })),
         }),
     } }),
     section.section("Rings and spinners", "Circular progress, determinate and not.", top({
         labelled("ring", glass.progress_ring("ring", { value = bar })),
-        labelled("ring, small", glass.progress_ring("ring_s", { size = "small", value = bar })),
+        labelled("ring, small", glass.progress_ring("ring_s", { size = "s", value = bar })),
         labelled("spinner", glass.spinner("spin", {})),
-        labelled("spinner, small", glass.spinner("spin_s", { size = "small" })),
+        labelled("spinner, small", glass.spinner("spin_s", { size = "s" })),
     })),
     section.section("Over glass", "Controls on a wallpaper (on_glass).", on_wall({
         section.glass_pane({

@@ -11,7 +11,7 @@ local function labelled(caption, node, height)
     return section.labelled(caption, rect { height = height or CELL, children = { row { align_v = not height and "center" or nil, children = { node } } } })
 end
 
-local SIZES = { "mini", "small", "regular", "large", "xl" }
+local SIZES = { "xs", "s", "m", "l", "xl" }
 
 local function line(children) return row { spacing = 16, align_v = "center", children = children } end
 local function top(children) return row { spacing = 16, align_v = "start", children = children } end
@@ -46,21 +46,21 @@ local radio = state("demo_toggles_radio", "Small")
 local radio_h = state("demo_toggles_radio_h", "B")
 
 local switch_sizes = each(SIZES, function(size)
-    return labelled(size, glass.switch("sw_" .. size, { size = size, value = state("demo_toggles_sw_" .. size, true), label = size }))
+    return labelled(size, glass.switch("sw_" .. size, { size = size, value = state("demo_toggles_sw_" .. size, true), name = size }))
 end)
-switch_sizes[#switch_sizes + 1] = labelled("off", glass.switch("sw_off", { value = state("demo_toggles_sw_off", false), label = "off" }))
-switch_sizes[#switch_sizes + 1] = labelled("disabled", glass.switch("sw_dis", { value = state("demo_toggles_sw_dis", true), disabled = true, label = "disabled" }))
+switch_sizes[#switch_sizes + 1] = labelled("off", glass.switch("sw_off", { value = state("demo_toggles_sw_off", false), name = "off" }))
+switch_sizes[#switch_sizes + 1] = labelled("disabled", glass.switch("sw_dis", { value = state("demo_toggles_sw_dis", true), disabled = true, name = "disabled" }))
 
 local seg_label = state("demo_toggles_seg_label", "Day")
 local seg_icon = state("demo_toggles_seg_icon", "list")
 local seg_both = state("demo_toggles_seg_both", "Inbox")
 local seg_multi = state("demo_toggles_seg_multi", { bold = true })
-local seg_sizes = each({ "small", "regular", "large" }, function(size)
+local seg_sizes = each({ "s", "m", "l" }, function(size)
     return labelled(size, glass.segmented_control("seg_" .. size, { size = size, value = state("demo_toggles_seg_" .. size, "Day"), items = { { label = "Day" }, { label = "Week" }, { label = "Month" } } }))
 end)
 
 local step = state("demo_toggles_step", 5)
-local step_sizes = each({ "small", "regular", "large" }, function(size)
+local step_sizes = each({ "s", "m", "l" }, function(size)
     return labelled(size, glass.stepper("step_" .. size, { size = size, value = state("demo_toggles_step_" .. size, 3), min = 0, max = 10 }))
 end)
 
@@ -104,7 +104,7 @@ return section.page {
         line({
             glass.checkbox("wall_check", { label = "Checkbox", value = state("demo_toggles_wall_check", true), on_glass = true }),
             glass.radio_group("wall_radio", { options = { "One", "Two" }, value = state("demo_toggles_wall_radio", "One"), horizontal = true, on_glass = true }),
-            glass.switch("wall_switch", { value = state("demo_toggles_wall_switch", true), on_glass = true, label = "Switch" }),
+            glass.switch("wall_switch", { value = state("demo_toggles_wall_switch", true), on_glass = true, name = "Switch" }),
         }),
         line({
             glass.segmented_control("wall_seg", { value = state("demo_toggles_wall_seg", "Day"), items = { { label = "Day" }, { label = "Week" }, { label = "Month" } }, on_glass = true }),

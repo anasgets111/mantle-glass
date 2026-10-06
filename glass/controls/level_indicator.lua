@@ -6,9 +6,9 @@ local tg = require("glass.internal.toggles")
 
 -- not in the kit: bar thickness per size, cell gap and corner radius, star points per size and
 -- the star's inner radius as a fraction of its outer radius (the regular five-point star)
-local HEIGHT = { mini = 6, small = 6, regular = 10, large = 12, xl = 14 }
+local HEIGHT = { xs = 6, s = 6, m = 10, l = 12, xl = 14 }
 local CELL_GAP, CELL_RADIUS = 2, 2
-local STAR = { mini = 10, small = 12, regular = 16, large = 20, xl = 24 }
+local STAR = { xs = 10, s = 12, m = 16, l = 20, xl = 24 }
 local STAR_GAP = 2
 local STAR_INNER = 0.382
 
@@ -41,7 +41,7 @@ end
 function M.level_indicator(id, opts)
     opts = opts or {}
     local style = opts.style or "continuous"
-    local size = opts.size or "regular"
+    local size = opts.size or "m"
     local rating = style == "rating"
     local lo, hi = opts.min or 0, opts.max or (rating and 5 or 1)
     local value = opts.value

@@ -8,8 +8,8 @@ A Liquid Glass component library for the [Mantle](https://github.com/anasgets111
 shell engine, with a demo app that shows every component.
 
 - 50+ components: window chrome (traffic lights, toolbars, sidebar, inspector, tabs), buttons,
-  toggles, sliders, text fields and text views, pickers, tables and outlines, menus, popovers,
-  alerts, sheets, tooltips, notifications, a menu bar and a Dock.
+  toggles, sliders, text fields (single and multiline), pickers, tables and outlines, menus, popovers,
+  dialogs, sheets, tooltips, notifications, a menu bar and a Dock.
 - Liquid Glass materials with refraction, vibrancy, light and dark, any accent colour, and the
   inactive-window look.
 - Follows the desktop's dark mode, accent, contrast and reduced-motion settings.
@@ -28,7 +28,7 @@ return {
     glass.app_window {
         id = "app",
         title = "My app",
-        child = glass.button("save", { label = "Save", kind = "default" }),
+        child = glass.button("save", { label = "Save", kind = "primary" }),
     },
 }
 ```

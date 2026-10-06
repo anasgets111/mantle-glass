@@ -1,4 +1,4 @@
--- Tables: a sortable multi-select table, an outline, a table wider than its box and a tab view.
+-- Tables: a sortable multi-select table, an outline, a table wider than its box and tabs.
 local section = require("demo.section")
 local glass = require("glass")
 
@@ -78,7 +78,7 @@ local TREE = {
         { name = "main.lua", icon = "file-code", kind = "Lua" },
         { name = "glass", icon = "folder", kind = "Folder", children = {
             { name = "table.lua", icon = "file-code", kind = "Lua" },
-            { name = "tab_view.lua", icon = "file-code", kind = "Lua" },
+            { name = "tabs.lua", icon = "file-code", kind = "Lua" },
         } },
     } },
     { name = "docs", icon = "folder", kind = "Folder", children = {
@@ -129,9 +129,9 @@ local wide = glass.table("wide", {
 })
 
 local function note(msg) return glass.text(msg, c.secondary_label, "body") end
-local tabs = column { width = 460, children = { glass.tab_view("tabs", {
+local tabs = column { width = 460, children = { glass.tabs("tabs", {
     height = 90,
-    tabs = {
+    items = {
         { name = "general", label = "General", icon = "settings", content = note("General settings live here.") },
         { name = "appearance", label = "Appearance", icon = "palette", content = column { spacing = 8, children = {
             note("Pick a look."),
@@ -147,5 +147,5 @@ return section.page {
         column { width = 520, spacing = 8, children = { tree, note("Left and Right collapse and expand.") } },
     } }),
     section.section("Horizontal scroll", "Columns wider than the table scroll sideways, header and rows together, with a knob along the bottom. Scrolling shows the overlay knobs: Left and Right, a horizontal wheel, or Shift+wheel over the header.", column { width = 700, spacing = 8, children = { wide } }),
-    section.section("Tab view", "A segmented control over a group box; the content swaps in place.", tabs),
+    section.section("Tabs", "A segmented control over a group box; the content swaps in place.", tabs),
 }

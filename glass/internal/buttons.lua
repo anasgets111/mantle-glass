@@ -1,4 +1,4 @@
--- Shared by button.lua, popup_button.lua and color_well.lua: the kit's push-button colours per
+-- Shared by button.lua, dropdown.lua and color_well.lua: the kit's push-button colours per
 -- kind and state and the pressable, focusable shell every control uses.
 local theme = require("glass.theme")
 local core = require("glass.core")
@@ -18,7 +18,7 @@ local function rgba(hex)
         (tonumber(hex:sub(8, 9), 16) or 255) / 255
 end
 
--- `top` composited over `bottom`: the borderless label's pressed tint, since text takes one colour.
+-- `top` composited over `bottom`: the plain label's pressed tint, since text takes one colour.
 local function over(bottom, top)
     local br, bg, bb, ba = rgba(bottom)
     local tr, tg, tb, ta = rgba(top)
@@ -43,7 +43,7 @@ local BEZEL = {
     },
 }
 local TOGGLE_OFF = { light = { "#0000000D", "#00000021", "#00000005" }, dark = { "#FFFFFF0D", "#FFFFFF21", "#FFFFFF05" } }
--- Default buttons: the overlay over the clicked tone, and light content's idle overlay.
+-- Primary buttons: the overlay over the clicked tone, and light content's idle overlay.
 local DEFAULT_HELD = { content = { light = { "#0000001A", PD }, dark = { "#FFFFFF1A", PL } },
     glass = { light = { "#00000026", PD }, dark = { "#FFFFFF24", PL } } }
 -- Tinted and destructive: the accent at a group opacity per state, with a faint overlay inside it.
@@ -67,7 +67,7 @@ local TOGGLE_INACTIVE = {
         disabled = { { "#00000008", "#FFFFFF0A" }, { "#0000000D", "#FFFFFF0D" } },
     },
 }
-local GREYS_WHEN_INACTIVE = { toggle = true, default = true, default_destructive = true, tinted = true, destructive = true }
+local GREYS_WHEN_INACTIVE = { toggle = true, primary = true, default_destructive = true, tinted = true, destructive = true }
 
 -- `alpha` scaled by `k`.
 local function scaled(color, k)
@@ -84,9 +84,9 @@ local function layers(stack)
 end
 
 -- Fill (a background layer list) and label colour of a control: `kind` as in `button`, `p` the
--- palette, `st` "idle", "held" or "disabled", `on` the toggle or colour-well selection. "plain" is
+-- palette, `st` "idle", "held" or "disabled", `on` the toggle or colour-well selection. "bezel" is
 -- the pop-up/arrow bezel (label `label`, not the vibrant grey) and "well" the colour well's capsule.
--- `active` false is an inactive window: the coloured kinds go grey like the bordered bezel.
+-- `active` false is an inactive window: the coloured kinds go grey like the secondary bezel.
 function M.look(kind, p, dark, glass, st, on, active)
     local inactive = active == false and GREYS_WHEN_INACTIVE[kind]
     if inactive then
@@ -96,7 +96,7 @@ function M.look(kind, p, dark, glass, st, on, active)
     local vib = dark and PL or PD
     local accent, red = glass and p.vibrant_accent or p.accent, glass and p.vibrant_red or p.red
     local label = st == "disabled" and (glass and p.vibrant_tertiary_label or p.tertiary_label)
-        or (glass or not dark and kind ~= "plain") and p.vibrant_label or p.label
+        or (glass or not dark and kind ~= "bezel") and p.vibrant_label or p.label
     local bezel = BEZEL[where][mode][i]
 
     if inactive and kind == "toggle" then
@@ -123,15 +123,15 @@ function M.look(kind, p, dark, glass, st, on, active)
             label = st == "disabled" and theme.alpha(accent, glass and 0.3 or 0.4) or accent
         end
         return layers(stack), label
-    elseif kind == "default" or kind == "default_destructive" then
-        local tone = kind == "default" and p.vibrant_accent or p.vibrant_red
+    elseif kind == "primary" or kind == "default_destructive" then
+        local tone = kind == "primary" and p.vibrant_accent or p.vibrant_red
         if st == "disabled" then
             return layers({ { theme.alpha(tone, 0.4) } }), theme.alpha(p.on_accent, 0.5)
         elseif st == "held" then
             return layers({ { tone }, DEFAULT_HELD[where][mode] }), p.on_accent
         end
-        local stack = { { glass and tone or (kind == "default" and p.accent or p.red) } }
-        if kind == "default" and not glass and not dark then
+        local stack = { { glass and tone or (kind == "primary" and p.accent or p.red) } }
+        if kind == "primary" and not glass and not dark then
             stack[2] = { "#00000008", PD }
         end
         return layers(stack), p.on_accent
@@ -141,7 +141,7 @@ function M.look(kind, p, dark, glass, st, on, active)
         local k = t[1][i]
         return layers({ { theme.alpha(tone, k) }, { scaled(t[2][1], k), t[2][2] } }),
             st == "disabled" and theme.alpha(tone, glass and 0.25 or 0.4) or tone
-    elseif kind == "borderless" then
+    elseif kind == "plain" then
         local tint = st == "held" and over(accent, glass and dark and "#FFFFFF2E" or "#0000002E") or accent
         return {}, st == "disabled" and theme.alpha(accent, 0.5) or tint
     end
@@ -150,7 +150,7 @@ end
 
 -- Props for a label or glyph on the control: vibrant on glass, except on the coloured kinds.
 function M.vibrant(o)
-    local flat = o.kind == "default" or o.kind == "default_destructive"
+    local flat = o.kind == "primary" or o.kind == "default_destructive"
     return o.on_glass and not flat and material.vibrant({}) or {}
 end
 
@@ -158,7 +158,7 @@ end
 -- `o`: size, kind, on_glass, disabled, on (selection signal), width, padding, radius, name,
 -- on_click, window, props (extra node props).
 function M.control(id, o, content)
-    local size = theme.SIZES[o.size or "regular"]
+    local size = theme.SIZES[o.size or "m"]
     local disabled = M.signal(o.disabled or false)
     local props = merge({
         id = id,

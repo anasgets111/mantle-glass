@@ -16,7 +16,7 @@ local function labelled(caption, node, height)
     return section.labelled(caption, rect { height = height or CELL, children = { row { align_v = not height and "center" or nil, children = { node } } } })
 end
 
-local SIZES = { "mini", "small", "regular", "large", "xl" }
+local SIZES = { "xs", "s", "m", "l", "xl" }
 local FRUITS = { "Apple", "Banana", "Cherry", "Dragonfruit" }
 
 local function line(children) return row { spacing = 16, align_v = "start", children = children } end
@@ -39,7 +39,7 @@ local searches = each(SIZES, function(size)
     return labelled(size, (glass.search_field("sf_" .. size, { size = size, value = state("demo_inputs_sf_" .. size, "") })))
 end)
 
-local combos = each({ "small", "regular", "large" }, function(size)
+local combos = each({ "s", "m", "l" }, function(size)
     return labelled(size, (glass.combo_box("cb_" .. size, { size = size, items = FRUITS, width = 140, placeholder = "Fruit", value = state("demo_inputs_cb_" .. size, "") })))
 end)
 
@@ -64,21 +64,22 @@ return section.page {
     } }),
     section.section("Toolbar search", "The variant that sits on small glass in a window toolbar.", on_wall({
         row(material.glass("small", { radius = glass.theme.CAPSULE, padding = 4, children = { (glass.search_field("tb_sf", { toolbar = true, size = "xl", width = 159 })) } })),
-        row(material.glass("small", { radius = glass.theme.CAPSULE, padding = 4, children = { (glass.search_field("tb_sf_r", { toolbar = true, size = "regular", width = 149 })) } })),
+        row(material.glass("small", { radius = glass.theme.CAPSULE, padding = 4, children = { (glass.search_field("tb_sf_r", { toolbar = true, size = "m", width = 149 })) } })),
     }, 100)),
     section.section("Combo boxes", "A text field with a menu of suggestions; picking one fills the field.", column { spacing = 16, children = {
         line({
-            labelled("regular", (glass.combo_box("cb", { items = FRUITS, value = fruit, width = 160, placeholder = "Fruit" }))),
+            labelled("m", (glass.combo_box("cb", { items = FRUITS, value = fruit, width = 160, placeholder = "Fruit" }))),
             labelled("value", glass.text(fruit:map(function(v) return v == "" and "empty" or v end), c.secondary_label, "body")),
             labelled("disabled", (glass.combo_box("cb_off", { items = FRUITS, value = state("demo_inputs_cb_off", "Apple"), width = 160, disabled = true }))),
         }),
         line(combos),
     } }),
-    section.section("Text views", "Several lines that grow to a limit, then scroll. Return breaks the line and Ctrl+Return sends; the chat one sends on Return.", column { spacing = 16, children = {
-        (glass.text_view("tv_notes", { value = notes, placeholder = "Notes", min_lines = 3, max_lines = 6 })),
+    section.section("Multiline text fields", "Several lines that grow to a limit, then scroll. Return breaks the line and Ctrl+Return sends; the chat one sends on Return.", column { spacing = 16, children = {
+        (glass.text_field("tv_notes", { multiline = true, value = notes, placeholder = "Notes", min_lines = 3, max_lines = 6 })),
         line({
             labelled("chat", column { width = 320, spacing = 6, children = {
-                (glass.text_view("tv_chat", {
+                (glass.text_field("tv_chat", {
+                    multiline = true,
                     value = draft,
                     placeholder = "Message",
                     min_lines = 1,

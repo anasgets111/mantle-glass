@@ -24,7 +24,7 @@ local SWATCH_INSET = 3
 ---@return Node
 function M.color_well(id, opts)
     opts = opts or {}
-    local height = theme.SIZES[opts.size or "regular"].height
+    local height = theme.SIZES[opts.size or "m"].height
     local value = opts.value or state("glass_well_" .. id, theme.SYSTEM.green[1])
     return buttons.control(id, {
         size = opts.size,

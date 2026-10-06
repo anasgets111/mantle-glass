@@ -9,7 +9,7 @@ local reveal = require("glass.internal.sidebar").reveal
 local c, FADE = theme.c, theme.motion.fade
 
 -- Glyph size per button size; the box and radius are `theme.SIZES`.
-local GLYPH = { mini = 10, small = 10, regular = 13, large = 13, xl = 13 }
+local GLYPH = { xs = 10, s = 10, m = 13, l = 13, xl = 13 }
 local SLOT = { width = 18, height = 16 } -- the group's chevron slot, from the kit
 
 local M = {}
@@ -20,7 +20,7 @@ local M = {}
 ---@field size? glass.Size
 ---@field disabled? boolean|Signal<boolean>
 ---@field on_glass? boolean
----@field label? string Accessible name.
+---@field name? string Accessible name.
 ---@field on_change? fun(expanded: boolean)
 ---@field [string] "no such property"
 
@@ -29,13 +29,13 @@ local M = {}
 ---@return Node
 function M.disclosure_button(id, opts)
     opts = opts or {}
-    local size = opts.size or "regular"
+    local size = opts.size or "m"
     local box = theme.SIZES[size]
     local n = tg.role(opts)
     local disabled = tg.sig(opts.disabled)
     ---@type StateSignal<boolean>
     local value = opts.value or state("glass_disclosure_" .. id, false)
-    local props = { accessible_name = opts.label or id, width = box.height, height = box.height, radius = box.radius }
+    local props = { accessible_name = opts.name or id, width = box.height, height = box.height, radius = box.radius }
     local held, focused = tg.interact("disc_" .. id, props, opts, function()
         value:set(not value:get())
         if opts.on_change then

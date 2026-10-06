@@ -17,7 +17,7 @@ local RINGS = {
 ---@field size? number Default 28, the kit's; the image keeps the 2 px inset.
 ---@field fit? "contain"|"cover" Default "contain".
 ---@field on_click? fun() Usually opens a picker.
----@field label? string Accessible name.
+---@field name? string Accessible name.
 ---@field [string] "no such property"
 
 ---@param id string
@@ -32,7 +32,7 @@ function M.image_well(id, opts)
         radius = WELL.radius,
         padding = WELL.inset,
         background = theme.c.quinary_fill,
-        accessible_name = opts.label or id,
+        accessible_name = opts.name or id,
         on_click = opts.on_click,
         children = opts.source and { image {
             source = opts.source,

@@ -1,4 +1,4 @@
--- Menus & popovers: menus, pop-up and pull-down buttons in context, popovers, alerts, a sheet,
+-- Menus & popovers: menus, dropdown and pull-down buttons in context, popovers, dialogs, a sheet,
 -- tooltips and notifications. Each opener is a glass.button.
 local section = require("demo.section")
 local glass = require("glass")
@@ -68,7 +68,7 @@ local context = line {
                 { label = "Move to Trash", icon = "trash-2", on_click = say("Move to Trash") },
             }
         end,
-        child = rect(glass.shape {
+        child = rect(glass.core.shape {
             width = 320,
             height = 96,
             radius = 12,
@@ -89,9 +89,9 @@ local pop_in_context = glass.group_box("ctx", {
         children = {
             row { spacing = 12, align_v = "center", children = {
                 glass.text("Format", c.label, "body"),
-                glass.popup_button("ctx_format", { items = { "PNG", "JPEG", "TIFF", "PDF" }, width = 100 }),
+                glass.dropdown("ctx_format", { items = { "PNG", "JPEG", "TIFF", "PDF" }, width = 100 }),
                 glass.text("Fruit", c.label, "body"),
-                glass.popup_button("ctx_fruit", { items = FRUITS, width = 100 }),
+                glass.dropdown("ctx_fruit", { items = FRUITS, width = 100 }),
             } },
             row { spacing = 12, align_v = "center", children = {
                 glass.pull_down_button("ctx_pull", { label = "Share", width = 100, items = {
@@ -100,7 +100,7 @@ local pop_in_context = glass.group_box("ctx", {
                     { separator = true },
                     { label = "Copy Link", icon = "link", on_click = say("Copy Link") },
                 } }),
-                glass.button("ctx_export", { kind = "default", label = "Export" }),
+                glass.button("ctx_export", { kind = "primary", label = "Export" }),
             } },
         },
     },
@@ -115,7 +115,7 @@ local function popover(edge)
             content = column { spacing = 8, padding = 16, children = {
                 glass.text("Opens " .. edge, c.label, "headline"),
                 glass.text("A popover points at the control that opened it.", c.secondary_label, "body", { wrap = "word", width = "fill" }),
-                glass.button("pop_" .. edge .. "_ok", { kind = "default", label = "Got it", on_click = function() glass.overlay.close("glass_popover") end }),
+                glass.button("pop_" .. edge .. "_ok", { kind = "primary", label = "Got it", on_click = function() glass.overlay.close("glass_popover") end }),
             } },
         }
     end)
@@ -155,9 +155,9 @@ local edge = column { width = "fill", spacing = 280, children = {
     }),
 } }
 
-local alerts = line {
-    opener("alert_two", "Alert", function()
-        glass.open_alert {
+local dialogs = line {
+    opener("dialog_two", "Dialog", function()
+        glass.open_dialog {
             icon = "triangle-alert",
             title = "Delete 3 items?",
             message = "This can't be undone.",
@@ -167,13 +167,13 @@ local alerts = line {
             },
         }
     end),
-    opener("alert_three", "Three buttons", function()
-        glass.open_alert {
+    opener("dialog_three", "Three buttons", function()
+        glass.open_dialog {
             icon = "save",
             title = "Save changes?",
             message = "Your changes will be lost if you don't save them.",
             buttons = {
-                { label = "Save", kind = "default", on_click = say("Saved") },
+                { label = "Save", kind = "primary", on_click = say("Saved") },
                 { label = "Don't Save", kind = "destructive", on_click = say("Discarded") },
                 { label = "Cancel", on_click = say("Cancelled") },
             },
@@ -192,7 +192,7 @@ local function sheet_form(close)
         } }),
         row { spacing = 8, align_h = "end", children = {
             glass.button("sheet_cancel", { label = "Cancel", on_click = close }),
-            glass.button("sheet_create", { kind = "default", label = "Create", on_click = function() close(); say("Created " .. name_value:get())() end }),
+            glass.button("sheet_create", { kind = "primary", label = "Create", on_click = function() close(); say("Created " .. name_value:get())() end }),
         } },
     } }
 end
@@ -212,9 +212,9 @@ local tooltips = line {
 
 local notifications = line {
     glass.button("notify", {
-        kind = "default",
+        kind = "primary",
         label = "Show notification",
-        on_click = function() glass.open_notification { title = "Build finished", body = "mantle-glass compiled with no warnings.", icon = "check", app = "Mantle" } end,
+        on_click = function() glass.notify { title = "Build finished", body = "mantle-glass compiled with no warnings.", icon = "check", app = "Mantle" } end,
     }),
 }
 
@@ -223,7 +223,7 @@ return section.page {
     section.section("Context menu", "Opens at the pointer on a right click.", context),
     section.section("Pop-up and pull-down", "In context: a pop-up picks a value, a pull-down runs an action.", pop_in_context),
     section.section("Popovers", "Open on any edge of the control.", popovers),
-    section.section("Alerts", "Two buttons side by side, then three stacked with a suppression checkbox.", alerts),
+    section.section("Dialogs", "Two buttons side by side, then three stacked with a suppression checkbox.", dialogs),
     section.section("Sheet", "A modal panel with a small form.", sheets),
     section.section("Tooltips", "Rest the pointer on a control.", tooltips),
     section.section("Notifications", "A banner at the top right.", notifications),

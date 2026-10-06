@@ -1,4 +1,4 @@
--- Layers over a window or panel: menus, popovers, alerts, sheets and the tooltip. `M.layer(id, build)`
+-- Layers over a window or panel: menus, popovers, dialogs, sheets and the tooltip. `M.layer(id, build)`
 -- registers a builder, `M.open(id, data, host)` shows it on top of `host`'s stack, `M.close(id)`
 -- removes it with its `exit`. `build(data)` returns a node whose `id` is the layer's own, usually a
 -- full-host rect whose `on_click` closes it. A host is an `app_window` (its own id) or a panel that

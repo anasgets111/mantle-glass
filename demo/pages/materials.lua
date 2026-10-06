@@ -27,7 +27,7 @@ end
 local tiles = {}
 for i, spec in ipairs(TILES) do tiles[i] = tile(spec) end
 
-local wall = rect(glass.shape {
+local wall = rect(glass.core.shape {
     width = "fill",
     radius = 12,
     clip = "rounded",

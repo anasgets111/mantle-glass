@@ -21,8 +21,8 @@ local box = geometry("glass_tip_box")
 -- Wraps `opts.child` so resting the pointer on it shows `opts.label` just under the pointer, or
 -- above it and slid left where the window or panel would cut it.
 ---@class glass.TooltipOpts
----@field child? Node
----@field label? string
+---@field child Node
+---@field label string|Signal<string>
 ---@field window? string
 ---@field [string] "no such property"
 

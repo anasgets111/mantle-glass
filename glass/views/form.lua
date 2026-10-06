@@ -16,7 +16,7 @@ local M = {}
 ---@class glass.FormRowOpts
 ---@field label? string|Signal<string>
 ---@field subtitle? string|Signal<string>
----@field icon? string Lucide name; a grey 24 px service icon.
+---@field icon? string A shared icon name or a Lucide name; a grey 24 px service icon.
 ---@field trailing? Node Right aligned.
 ---@field control? boolean True when `trailing` is a 24 px control: 48 high, else 40; a subtitle makes it 56.
 ---@field on_click? fun() Makes the row a Tab stop.

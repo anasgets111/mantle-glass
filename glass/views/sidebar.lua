@@ -12,9 +12,9 @@ local c, FADE = theme.c, theme.motion.fade
 -- Per size: row and header height, header font, title font, icon box and glyph, disclosure
 -- column, trailing detail font. Fonts are { size, weight, line height }.
 local SIZES = {
-    small = { row = 24, header = 18, hfont = { 11, 700, 14 }, tfont = { 11, 500, 14 }, icon = 16, glyph = 11, disc = 12, dfont = { 11, 500, 14 } },
-    medium = { row = 32, header = 18, hfont = { 11, 700, 14 }, tfont = { 13, 400, 16 }, icon = 20, glyph = 13, disc = 16, dfont = { 13, 500, 16 } },
-    large = { row = 40, header = 20, hfont = { 13, 700, 16 }, tfont = { 15, 400, 20 }, icon = 24, glyph = 15, disc = 16, dfont = { 15, 500, 20 } },
+    s = { row = 24, header = 18, hfont = { 11, 700, 14 }, tfont = { 11, 500, 14 }, icon = 16, glyph = 11, disc = 12, dfont = { 11, 500, 14 } },
+    m = { row = 32, header = 18, hfont = { 11, 700, 14 }, tfont = { 13, 400, 16 }, icon = 20, glyph = 13, disc = 16, dfont = { 13, 500, 16 } },
+    l = { row = 40, header = 20, hfont = { 13, 700, 16 }, tfont = { 15, 400, 20 }, icon = 24, glyph = 15, disc = 16, dfont = { 15, 500, 20 } },
 }
 local FOLDER_WEIGHT = 500
 local PANE = { inset = 4, pad = 10, gap = 4, indent = 12, radius = 8, selected = 0.055 }
@@ -49,7 +49,7 @@ end
 ---@class glass.SidebarOpts
 ---@field sections glass.SidebarSection[]
 ---@field value? StateSignal<string> Selected item name; default the first item.
----@field size? "small"|"medium"|"large" Default "medium".
+---@field size? "s"|"m"|"l" Default "m".
 ---@field on_select? fun(name: string)
 ---@field window? string
 ---@field active? Signal<boolean> Overrides the window's focus, for an inline preview.
@@ -59,7 +59,7 @@ end
 ---@param opts glass.SidebarOpts
 ---@return Node
 function M.sidebar(id, opts)
-    local s = SIZES[opts.size or "medium"]
+    local s = SIZES[opts.size or "m"]
     local first = opts.sections[1].items[1].name
     ---@type StateSignal<string>
     local value = opts.value or state("glass_sidebar_" .. id, first)

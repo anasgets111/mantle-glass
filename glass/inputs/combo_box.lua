@@ -11,10 +11,10 @@ local M = {}
 
 -- The menu button's background width, radius and chevron size, and its inset in the field, per size.
 local BUTTON = {
-    mini = { 16, 2.5, 9, 2 },
-    small = { 20, 3.5, 10, 2 },
-    regular = { 24, 4.5, 10, 2 },
-    large = { 24, 5.5, 12.5, 2 },
+    xs = { 16, 2.5, 9, 2 },
+    s = { 20, 3.5, 10, 2 },
+    m = { 24, 4.5, 10, 2 },
+    l = { 24, 5.5, 12.5, 2 },
     xl = { 30, 6.5, 13, 3 },
 }
 
@@ -29,13 +29,13 @@ local BUTTON = {
 ---@return Node, glass.FieldHandle
 function M.combo_box(id, opts)
     opts = opts or {}
-    local size = opts.size or "regular"
+    local size = opts.size or "m"
     local b = BUTTON[size]
     local anchor = geometry("glass_anchor_" .. id)
     local input, handle = fields.input(id, opts)
     local menu = buttons.control(id .. "_menu", {
         size = size,
-        kind = "plain",
+        kind = "bezel",
         disabled = opts.disabled,
         window = opts.window,
         name = "Menu",

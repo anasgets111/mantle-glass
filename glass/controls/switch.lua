@@ -9,10 +9,10 @@ local c, FADE = theme.c, theme.motion.fade
 
 -- Per size, all from the kit: track, knob, inset, and the pressed glass knob's size and x (off, on), y.
 local SIZES = {
-    mini = { tw = 36, th = 16, kw = 21, kh = 13, inset = 1.5, gw = 33, gh = 20, gx = { -5, 8 }, gy = -2 },
-    small = { tw = 44, th = 20, kw = 26, kh = 16, inset = 2, gw = 40, gh = 26, gx = { -5, 9 }, gy = -3 },
-    regular = { tw = 54, th = 24, kw = 32, kh = 20, inset = 2, gw = 50, gh = 31, gx = { -7, 11 }, gy = -3.5 },
-    large = { tw = 64, th = 28, kw = 38, kh = 24, inset = 2, gw = 59, gh = 37, gx = { -8.5, 13.5 }, gy = -4.5 },
+    xs = { tw = 36, th = 16, kw = 21, kh = 13, inset = 1.5, gw = 33, gh = 20, gx = { -5, 8 }, gy = -2 },
+    s = { tw = 44, th = 20, kw = 26, kh = 16, inset = 2, gw = 40, gh = 26, gx = { -5, 9 }, gy = -3 },
+    m = { tw = 54, th = 24, kw = 32, kh = 20, inset = 2, gw = 50, gh = 31, gx = { -7, 11 }, gy = -3.5 },
+    l = { tw = 64, th = 28, kw = 38, kh = 24, inset = 2, gw = 59, gh = 37, gx = { -8.5, 13.5 }, gy = -4.5 },
     xl = { tw = 80, th = 36, kw = 47, kh = 30, inset = 3, gw = 73, gh = 46, gx = { -9, 16 }, gy = -5 },
 }
 -- not in the kit: the spring that moves and grows the knob (SwiftUI's snappy)
@@ -23,7 +23,8 @@ local M = {}
 -- Switch.
 ---@class glass.SwitchOpts: glass.ControlOpts
 ---@field value? StateSignal<boolean>
----@field label? string Accessible name.
+---@field label? string|Signal<string> Text beside the switch.
+---@field name? string Accessible name; default the label.
 ---@field on_change? fun(on: boolean)
 ---@field [string] "no such property"
 
@@ -32,13 +33,13 @@ local M = {}
 ---@return Node
 function M.switch(id, opts)
     opts = opts or {}
-    local s = SIZES[opts.size or "regular"]
+    local s = SIZES[opts.size or "m"]
     local n = tg.role(opts)
     local active = core.active(opts.window)
     local disabled = tg.sig(opts.disabled)
     ---@type StateSignal<boolean>
     local value = opts.value or state("glass_switch_" .. id, false)
-    local props = { accessible_name = opts.label or id, width = s.tw, height = s.th, radius = theme.CAPSULE }
+    local props = { accessible_name = opts.name or type(opts.label) == "string" and opts.label or id, width = s.tw, height = s.th, radius = theme.CAPSULE }
     local held, focused = tg.interact("sw_" .. id, props, opts, function()
         value:set(not value:get())
         if opts.on_change then
@@ -83,7 +84,7 @@ function M.switch(id, opts)
         },
         knob(material.glass("knob", { opacity = held:map(function(h) return h and 1 or 0 end) })),
     }
-    return rect(core.shape(props))
+    return tg.labelled(rect(core.shape(props)), opts)
 end
 
 return M

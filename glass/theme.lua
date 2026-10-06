@@ -116,6 +116,14 @@ local function contrasted(role, color)
     return M.alpha(color, math.min(1, tonumber(color:sub(8, 9), 16) / 255 * 1.6))
 end
 
+-- The opaque colour of translucent `top` laid over opaque `bottom`.
+local function over(top, bottom)
+    local a = (tonumber(top:sub(8, 9), 16) or 255) / 255
+    local t, b = { rgb(top) }, { rgb(bottom) }
+    local function mix(i) return math.floor(t[i] * a + b[i] * (1 - a) + 0.5) end
+    return string.format("#%02X%02X%02X", mix(1), mix(2), mix(3))
+end
+
 local function palette(dark, accent, high)
     local p = {}
     for role, pair in pairs(ROLES) do
@@ -131,6 +139,11 @@ local function palette(dark, accent, high)
     local a = M.SYSTEM[accent] or M.SYSTEM.blue
     p.accent = a[dark and 2 or 1]
     p.vibrant_accent = a[dark and 4 or 3]
+    -- the roles every Mantle kit shares, over this kit's own
+    p.text, p.text_secondary, p.text_disabled = p.label, p.secondary_label, p.tertiary_label
+    p.background, p.container_raised, p.error, p.on_error = p.window_background, p.fill, p.red, p.on_accent
+    p.success, p.warning = p.green, p.orange
+    p.container = over(p.secondary_fill, p.window_background)
     -- not in the kit: it shows only blue's highlight; other accents take their deeper vibrant shade.
     if accent ~= "blue" then
         p.menu_highlight = a[3]
@@ -198,16 +211,18 @@ M.type = {
     window_title = { 13, 700, 15, 0 },
     sidebar_title = { 15, 700, 15, -0.2 },
 }
+-- The styles every Mantle kit shares, over the native ones.
+M.type.title, M.type.label, M.type.caption = M.type.title1, M.type.control, M.type.caption1
 
 -- Control sizes, shared by every button-like control: height, corner radius (`CAPSULE` is a pill),
 -- label style and horizontal label inset.
 M.CAPSULE = 999
 M.SMOOTHING = 0.6
 M.SIZES = {
-    mini = { height = 16, radius = 4, label = "control_mini", inset = 7, icon = 10 },
-    small = { height = 20, radius = 5, label = "control_small", inset = 10, icon = 11 },
-    regular = { height = 24, radius = 6, label = "control", inset = 16, icon = 13 },
-    large = { height = 28, radius = M.CAPSULE, label = "control", inset = 16, icon = 13 },
+    xs = { height = 16, radius = 4, label = "control_mini", inset = 7, icon = 10 },
+    s = { height = 20, radius = 5, label = "control_small", inset = 10, icon = 11 },
+    m = { height = 24, radius = 6, label = "control", inset = 16, icon = 13 },
+    l = { height = 28, radius = M.CAPSULE, label = "control", inset = 16, icon = 13 },
     xl = { height = 36, radius = M.CAPSULE, label = "control", inset = 16, icon = 13 },
 }
 
@@ -235,5 +250,7 @@ M.motion = {
     press = spring(0.3, 0.65),
     fade = { duration = 200, easing = "out_quad" },
 }
+-- The speeds every Mantle kit shares, over the native springs.
+M.motion.fast, M.motion.slow = M.motion.snappy, M.motion.smooth
 
 return M

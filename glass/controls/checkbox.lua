@@ -10,10 +10,10 @@ local FADE = theme.motion.fade
 -- Per size: box, checkbox radius, label gap (checkbox, radio), frame height, label style, then the
 -- check and dash as { x, y, w, h } inside the box, and the radio dot's diameter.
 local SIZES = {
-    mini = { box = 12, radius = 3.5, gap = { 3, 3 }, frame = 14, label = "control_mini", check = { 2.1, 2.2, 7.9, 7.6 }, dash = { 3.2, 5.1, 5.5, 1.7 }, dot = 4 },
-    small = { box = 14, radius = 4.5, gap = { 4, 3 }, frame = 18, label = "control_small", check = { 2.3, 2.5, 9.3, 8.9 }, dash = { 3.8, 6, 6.5, 2 }, dot = 4.8 },
-    regular = { box = 16, radius = 5.5, gap = { 5, 3 }, frame = 24, label = "control", check = { 3.3, 3.5, 9.3, 8.9 }, dash = { 4.8, 7, 6.5, 2 }, dot = 4.8 },
-    large = { box = 18, radius = 6.5, gap = { 5, 5 }, frame = 28, label = "control", check = { 3.1, 3.4, 11.7, 11.3 }, dash = { 5, 8, 8, 2 }, dot = 5 },
+    xs = { box = 12, radius = 3.5, gap = { 3, 3 }, frame = 14, label = "control_mini", check = { 2.1, 2.2, 7.9, 7.6 }, dash = { 3.2, 5.1, 5.5, 1.7 }, dot = 4 },
+    s = { box = 14, radius = 4.5, gap = { 4, 3 }, frame = 18, label = "control_small", check = { 2.3, 2.5, 9.3, 8.9 }, dash = { 3.8, 6, 6.5, 2 }, dot = 4.8 },
+    m = { box = 16, radius = 5.5, gap = { 5, 3 }, frame = 24, label = "control", check = { 3.3, 3.5, 9.3, 8.9 }, dash = { 4.8, 7, 6.5, 2 }, dot = 4.8 },
+    l = { box = 18, radius = 6.5, gap = { 5, 5 }, frame = 28, label = "control", check = { 3.1, 3.4, 11.7, 11.3 }, dash = { 5, 8, 8, 2 }, dot = 5 },
     xl = { box = 18, radius = 6.5, gap = { 7, 7 }, frame = 36, label = "control", check = { 3.1, 3.4, 11.7, 11.3 }, dash = { 5, 8, 8, 2 }, dot = 5 },
 }
 local RADIO_GROUP_GAP = 12 -- not in the kit: spacing of a horizontal radio group
@@ -22,11 +22,11 @@ local M = {}
 
 -- `status` is a signal of "off", "mixed" or "on"; `activate` runs on click.
 local function choice(id, opts, radio, status, activate)
-    local s = SIZES[opts.size or "regular"]
+    local s = SIZES[opts.size or "m"]
     local n = tg.role(opts)
     local disabled = tg.sig(opts.disabled)
     local active = core.active(opts.window)
-    local props = { accessible_name = opts.label or id, height = s.frame, spacing = s.gap[radio and 2 or 1] }
+    local props = { accessible_name = opts.name or type(opts.label) == "string" and opts.label or id, height = s.frame, spacing = s.gap[radio and 2 or 1] }
     local held, focused = tg.interact("cb_" .. id, props, opts, activate)
     local on = status:map(function(v) return v ~= "off" end)
     local dim = computed({ disabled, active }, function(d, a) return d and a and 0.5 or 1 end)
@@ -105,7 +105,8 @@ end
 -- Checkbox.
 ---@class glass.CheckboxOpts: glass.ControlOpts
 ---@field value? StateSignal<boolean|"mixed"> A click on mixed turns on.
----@field label? string|Signal<string>
+---@field label? string|Signal<string> Text beside the box.
+---@field name? string Accessible name; default the label.
 ---@field on_change? fun(value: boolean)
 ---@field [string] "no such property"
 
@@ -131,6 +132,7 @@ end
 ---@field options string[] Labels.
 ---@field value? StateSignal<string> The chosen label; default the first.
 ---@field horizontal? boolean
+---@field name? string Accessible name of the group.
 ---@field on_change? fun(label: string)
 ---@field [string] "no such property"
 
@@ -142,14 +144,14 @@ function M.radio_group(id, opts)
     local kids = {}
     for i, option in ipairs(opts.options) do
         local status = value:map(function(v) return v == option and "on" or "off" end)
-        kids[i] = choice(id .. i, core.merge(core.merge({}, opts), { label = option }), true, status, function()
+        kids[i] = choice(id .. i, core.merge(core.merge({}, opts), { label = option, name = false }), true, status, function()
             value:set(option)
             if opts.on_change then
                 opts.on_change(option)
             end
         end)
     end
-    return (opts.horizontal and row or column) { spacing = opts.horizontal and RADIO_GROUP_GAP or 0, children = kids }
+    return (opts.horizontal and row or column) { accessible_name = opts.name, spacing = opts.horizontal and RADIO_GROUP_GAP or 0, children = kids }
 end
 
 return M

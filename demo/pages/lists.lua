@@ -22,7 +22,7 @@ local network = glass.form_section("net", {
     rows = {
         glass.form_row("wifi", { icon = "wifi", label = "Wi-Fi", control = true, trailing = sw("wifi_sw", wifi) }),
         glass.form_row("bt", { icon = "bluetooth", label = "Bluetooth", subtitle = "Not connected", trailing = sw("bt_sw", bluetooth) }),
-        glass.form_row("airdrop", { icon = "radio", label = "Nearby sharing", control = true, trailing = glass.popup_button("airdrop_pop", {
+        glass.form_row("airdrop", { icon = "radio", label = "Nearby sharing", control = true, trailing = glass.dropdown("airdrop_pop", {
             items = { "No One", "Contacts Only", "Everyone" }, value = airdrop, width = 130,
         }) }),
     },
@@ -46,9 +46,10 @@ local box = column { width = 620, children = { glass.group_box("box", {
     content = column { spacing = 6, children = {
         glass.text("Related content shares one quaternary-filled box.", c.label, "body"),
         glass.text("The title sits above it, like an NSBox.", c.secondary_label, "callout"),
+        glass.divider("box_div"),
         row { spacing = 8, children = {
             glass.button("box_a", { label = "Reset" }),
-            glass.button("box_b", { kind = "default", label = "Apply" }),
+            glass.button("box_b", { kind = "primary", label = "Apply" }),
         } },
     } },
 }) } }

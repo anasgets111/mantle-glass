@@ -5,11 +5,11 @@ local icons = require("glass.icons")
 
 local FADE = theme.motion.fade
 
----@alias glass.Size "mini"|"small"|"regular"|"large"|"xl"
+---@alias glass.Size "xs"|"s"|"m"|"l"|"xl"
 
 ---Fields most controls share.
 ---@class glass.ControlOpts
----@field size? glass.Size Default "regular".
+---@field size? glass.Size Default "m".
 ---@field disabled? boolean|Signal<boolean>
 ---@field on_glass? boolean The kit's over-glass colour set, for controls placed on glass.
 ---@field window? string The window or panel whose focus the control follows; default `core.window`.
@@ -62,7 +62,24 @@ end
 -- Lucide glyphs ink ~1.4x smaller than SF Symbols at the same size (24 px box, thin stroke).
 local LUCIDE_SCALE = 1.4
 
--- A Lucide icon by name (lucide.dev/icons), e.g. "search", at the SF Symbol point size `size`.
+-- The names every Mantle kit shares, as Lucide's.
+local SHARED = {
+    search = "search", close = "x", check = "check", add = "plus", remove = "minus", delete = "trash-2", edit = "pencil",
+    settings = "settings", home = "house", menu = "menu", more = "ellipsis", more_vertical = "ellipsis-vertical",
+    info = "info", warning = "triangle-alert", error = "circle-alert", help = "circle-help", star = "star", heart = "heart",
+    share = "share", copy = "copy", paste = "clipboard-paste", cut = "scissors", folder = "folder", file = "file",
+    document = "file-text", user = "user", group = "users", bell = "bell", mail = "mail", lock = "lock", unlock = "lock-open",
+    eye = "eye", eye_off = "eye-off", download = "download", upload = "upload", refresh = "refresh-cw", play = "play",
+    pause = "pause", stop = "square", skip_next = "skip-forward", skip_previous = "skip-back", volume = "volume-2",
+    volume_off = "volume-x", mic = "mic", camera = "camera", image = "image", calendar = "calendar", clock = "clock",
+    location = "map-pin", link = "link", send = "send", attach = "paperclip", sort = "arrow-up-down", filter = "funnel",
+    grid = "layout-grid", list = "list", chevron_down = "chevron-down", chevron_up = "chevron-up",
+    chevron_left = "chevron-left", chevron_right = "chevron-right", arrow_back = "arrow-left", arrow_forward = "arrow-right",
+    external_link = "external-link",
+}
+
+-- A Lucide icon by name (lucide.dev/icons), e.g. "search", at the SF Symbol point size `size`. The
+-- shared names (`SHARED`) resolve first.
 ---@param name string|Signal<string>
 ---@param color string|Signal<string>
 ---@param size? number Default 16.
@@ -70,7 +87,7 @@ local LUCIDE_SCALE = 1.4
 ---@return Node
 function M.icon(name, color, size, props)
     local function glyph(n)
-        return assert(icons[n], "glass: no Lucide icon named " .. tostring(n))
+        return assert(icons[SHARED[n] or n], "glass: no Lucide icon named " .. tostring(n))
     end
     return text(merge({
         content = type(name) == "string" and glyph(name) or name:map(glyph),

@@ -14,7 +14,7 @@ local M = {}
 
 ---@class glass.PathSegment
 ---@field label string
----@field icon? string Lucide name.
+---@field icon? string A shared icon name or a Lucide name.
 ---@field [string] "no such property"
 
 -- Path control. `segments` may be a signal of a list; the control follows it.
@@ -32,7 +32,7 @@ local M = {}
 ---@param opts glass.PathControlOpts
 ---@return Node
 function M.path_control(id, opts)
-    local size = opts.size or "regular"
+    local size = opts.size or "m"
     local g = theme.SIZES[size]
     local segments = buttons.signal(opts.segments)
     local function select(i)
@@ -54,7 +54,7 @@ function M.path_control(id, opts)
         local last = segments:map(function(list) return { list[#list] or { label = "" } } end)
         return buttons.control(id, {
             size = size,
-            kind = "plain",
+            kind = "bezel",
             on_glass = opts.on_glass,
             disabled = opts.disabled,
             window = opts.window,
@@ -104,7 +104,7 @@ function M.path_control(id, opts)
             end
             kids[#kids + 1] = buttons.control(id .. "_" .. item.i, {
                 size = size,
-                kind = "borderless",
+                kind = "plain",
                 on_glass = opts.on_glass,
                 disabled = opts.disabled,
                 window = opts.window,

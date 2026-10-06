@@ -124,7 +124,7 @@ end
 
 ---@class glass.ToolbarGroupOpts
 ---@field items glass.ToolbarItem[]
----@field size? "xl"|"medium" "xl" 36 high (default), "medium" 24.
+---@field size? "xl"|"m" "xl" 36 high (default), "m" 24.
 ---@field window? string The id whose focus it follows.
 ---@field active? Signal<boolean> Overrides the window's focus, for an inline preview.
 ---@field [string] "no such property"
@@ -133,7 +133,7 @@ end
 ---@param opts glass.ToolbarGroupOpts
 ---@return Node
 function M.toolbar_group(id, opts)
-    local xl = opts.size ~= "medium"
+    local xl = opts.size ~= "m"
     local inner, pad = xl and 28 or 20, xl and 4 or 2
     local active = opts.active or core.active(opts.window)
     local kids = {}
@@ -152,7 +152,7 @@ end
 
 -- A single toolbar button: a group of one.
 ---@class glass.ToolbarButtonOpts: glass.ToolbarItem
----@field size? "xl"|"medium"
+---@field size? "xl"|"m"
 ---@field window? string
 ---@field active? Signal<boolean>
 ---@field [string] "no such property"
@@ -171,7 +171,7 @@ end
 ---@field can_forward? boolean|Signal<boolean> Default true.
 ---@field on_back? fun()
 ---@field on_forward? fun()
----@field size? "xl"|"medium" Default "xl".
+---@field size? "xl"|"m" Default "xl".
 ---@field window? string
 ---@field active? Signal<boolean>
 ---@field [string] "no such property"
@@ -182,7 +182,7 @@ end
 function M.toolbar_navigation(id, opts)
     opts = opts or {}
     local active = opts.active or core.active(opts.window)
-    local medium = opts.size == "medium"
+    local medium = opts.size == "m"
     local function button(name, glyph, label, can, run)
         local item = { icon = glyph, label = label, on_click = run, disabled = sig(can == nil or can):map(function(on) return not on end) }
         return glyph_button(id .. "_" .. name, item, 20, active, medium and 24 or nil)
@@ -336,7 +336,7 @@ end
 -- The sidebar toggle: 36 px in the expanded and unified toolbars, 24 px in compact.
 ---@class glass.SidebarToggleOpts
 ---@field shown StateSignal<boolean>
----@field size? "xl"|"medium"
+---@field size? "xl"|"m"
 ---@field window? string
 ---@field active? Signal<boolean>
 ---@field [string] "no such property"

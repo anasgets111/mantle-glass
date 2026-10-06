@@ -12,7 +12,7 @@ local inactive = glass.theme.dark:map(function() return false end)
 
 -- A frame on the wallpaper, so its shadow and glass have something to show.
 local function stage(frame, width)
-    return rect(glass.shape {
+    return rect(glass.core.shape {
         width = (width or W) + 40,
         height = H + 40,
         radius = 12,
@@ -66,13 +66,13 @@ local function frame(id, title, extra)
         title = title,
         preview = true,
         child = body(title),
-        trailing = { tool(id .. "_share", "share", "Share", { active = off and inactive or nil, size = extra and (extra.toolbar == "compact" or extra.toolbar == "titlebar") and "medium" or nil }) },
+        trailing = { tool(id .. "_share", "share", "Share", { active = off and inactive or nil, size = extra and (extra.toolbar == "compact" or extra.toolbar == "titlebar") and "m" or nil }) },
     }
     return glass.window_frame(glass.merge(props, extra))
 end
 
 local function nav(id, extra)
-    return glass.toolbar_navigation("pv_nav_" .. id, glass.merge({ can_forward = false, size = id:find("compact") and "medium" or nil }, extra))
+    return glass.toolbar_navigation("pv_nav_" .. id, glass.merge({ can_forward = false, size = id:find("compact") and "m" or nil }, extra))
 end
 
 local STYLES = {
@@ -156,7 +156,7 @@ return section.page {
         section.labelled("no forward", glass.toolbar_navigation("nav_b", { can_forward = false })),
         section.labelled("none", glass.toolbar_navigation("nav_c", { can_back = false, can_forward = false })),
         section.labelled("inactive", glass.toolbar_navigation("nav_d", { active = inactive })),
-        section.labelled("medium", glass.toolbar_navigation("nav_e", { size = "medium" })),
+        section.labelled("m", glass.toolbar_navigation("nav_e", { size = "m" })),
     }, 110)),
     section.wide("Sidebar toggle and collapse", "The toggle sits at the pane's trailing edge; collapsing slides the pane away and the lights and toggle move into the toolbar. Drag the pane's edge to resize (180 to 400).", wrap({
         cell("unified", frame("collapse_unified", "Photos", { sidebar = sidebar("collapse_unified"), sidebar_shown = shown, leading = { nav("collapse_unified") } }), WIDE),

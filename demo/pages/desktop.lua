@@ -58,7 +58,7 @@ local dock = glass.dock("demo", {
     },
 })
 
-local desktop = rect(glass.shape {
+local desktop = rect(glass.core.shape {
     width = "fill",
     height = 560,
     radius = 12,

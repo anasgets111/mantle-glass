@@ -336,7 +336,7 @@ function M.window_frame(props)
         local shown = computed({ wanted, narrow, peek }, function(want, tight, open) return tight and open or not tight and want end)
         local lights_end = style.lights[1] + 68 + 12
         local tw = style.toggle[1] + 8
-        local size = style.toggle[1] == 24 and "medium" or "xl"
+        local size = style.toggle[1] == 24 and "m" or "xl"
         local function toggle(name)
             return toolbar.toolbar_button("glass_win_" .. id .. "_" .. name, {
                 icon = "panel-left",

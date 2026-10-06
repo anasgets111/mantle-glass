@@ -1,5 +1,5 @@
--- Liquid Glass alert and sheet, from the kit. Both are window modal:
--- the kit's overlay dims the window and blocks it; an alert closes with its buttons or Escape.
+-- Liquid Glass dialog and sheet, from the kit. Both are window modal:
+-- the kit's overlay dims the window and blocks it; a dialog closes with its buttons or Escape.
 local theme = require("glass.theme")
 local core = require("glass.core")
 local material = require("glass.material")
@@ -11,7 +11,7 @@ local text, icon = core.text, core.icon
 
 local M = {}
 
-local ALERT = {
+local DIALOG = {
     width = 260,
     radius = 26,
     padding = { top = 20, left = 16, right = 16, bottom = 16 },
@@ -24,24 +24,24 @@ local ALERT = {
 -- The kit's window-modal overlay: light, dark.
 local function dim() return theme.c.modal_dim end
 
-local SHEET = { width = 390, radius = 26, padding = 20 }
+local SHEET = { width = 390, radius = 26, padding = 20, margin = 12 }
 
 ---@type table
 local spec = {}
 
--- kind: "default" (preferred, accent), "destructive", anything else is a plain cancel.
-local function alert_button(i, b, on_close)
+-- kind: "primary" (preferred, accent), "destructive", else "plain" (the default), a cancel.
+local function dialog_button(i, b, on_close)
     local look = ({
-        default = { fill = c.accent, label = c.on_accent },
+        primary = { fill = c.accent, label = c.on_accent },
         destructive = {
             fill = computed({ c.vibrant_red, theme.dark }, function(red, dark) return theme.alpha(red, dark and 0.25 or 0.23) end),
             label = c.vibrant_red,
         },
     })[b.kind] or { fill = c.vibrant_secondary_fill, label = c.label }
     local props = {
-        id = "glass_alert_button" .. i,
+        id = "glass_dialog_button" .. i,
         width = "fill",
-        height = ALERT.button.height,
+        height = DIALOG.button.height,
         radius = theme.CAPSULE,
         background = look.fill,
         accessible_name = b.label,
@@ -52,39 +52,41 @@ local function alert_button(i, b, on_close)
             end
         end,
     }
-    core.focusable("alert_" .. i, props)
-    local held = core.pressable("alert_" .. i, props)
+    core.focusable("dialog_" .. i, props)
+    local held = core.pressable("dialog_" .. i, props)
     props.opacity = held:map(function(h) return h and 0.7 or 1 end)
     props.animate = { opacity = theme.motion.fade }
     props.children = { text(b.label, look.label, "control", { align_h = "center" }) }
     return rect(core.shape(props))
 end
 
-overlay.layer("glass_alert", function()
+overlay.layer("glass_dialog", function()
     local buttons = {}
-    local close = function() overlay.close("glass_alert") end
-    for i, b in ipairs(spec.buttons or {}) do
-        buttons[i] = alert_button(i, b, close)
+    local close = function() overlay.close("glass_dialog") end
+    for i, b in ipairs(spec.buttons or { { label = "OK", kind = "primary" } }) do
+        buttons[i] = dialog_button(i, b, close)
     end
     -- Two buttons sit side by side, more stack.
     local actions = (#buttons == 2 and row or column) {
         width = "fill",
-        spacing = #buttons == 2 and ALERT.button.side_gap or ALERT.button.gap,
+        spacing = #buttons == 2 and DIALOG.button.side_gap or DIALOG.button.gap,
         children = buttons,
     }
     local words = column {
         width = "fill",
-        spacing = ALERT.title_gap,
-        padding = { left = spec.icon and 0 or ALERT.inset, right = ALERT.inset },
+        spacing = DIALOG.title_gap,
+        padding = { left = spec.icon and 0 or DIALOG.inset, right = DIALOG.inset },
         children = {
             text(spec.title, c.vibrant_label, "headline", material.vibrant({ width = "fill", wrap = "word" })),
-            spec.message and text(spec.message, c.vibrant_label, "body", material.vibrant({ width = "fill", wrap = "word" })) or nil,
+            type(spec.message) == "table" and spec.message
+                or spec.message and text(spec.message, c.vibrant_label, "body", material.vibrant({ width = "fill", wrap = "word" }))
+                or nil,
         },
     }
     local head = words
     if spec.icon then
         head = row { width = "fill", children = {
-            rect { width = ALERT.icon.width, height = ALERT.icon.height, children = { icon(spec.icon, c.accent, 34, { align_h = "center", align_v = "center" }) } },
+            rect { width = DIALOG.icon.width, height = DIALOG.icon.height, children = { icon(spec.icon, c.accent, 34, { align_h = "center", align_v = "center" }) } },
             words,
         } }
     end
@@ -93,18 +95,18 @@ overlay.layer("glass_alert", function()
         -- not in the kit: the checkbox lines up with the text above it.
         kids[#kids + 1] = row {
             width = "fill",
-            padding = { left = ALERT.inset + (spec.icon and ALERT.icon.width - ALERT.inset or 0) },
-            children = { checkbox("alert_suppression", {
+            padding = { left = DIALOG.inset + (spec.icon and DIALOG.icon.width - DIALOG.inset or 0) },
+            children = { checkbox("dialog_suppression", {
                 label = spec.suppression.label or "Do not show this message again",
                 value = spec.suppression.value,
-                size = "small",
+                size = "s",
                 on_glass = true,
             }) },
         }
     end
     kids[#kids + 1] = actions
     return rect {
-        id = "glass_alert",
+        id = "glass_dialog",
         width = "fill",
         height = "fill",
         background = dim(),
@@ -112,26 +114,26 @@ overlay.layer("glass_alert", function()
         on_click = function() end,
         animate = { opacity = { duration = 150, from = 0 }, exit = { duration = 120, opacity = 0 } },
         children = { column(material.glass("large", {
-            width = ALERT.width,
-            radius = ALERT.radius,
-            padding = ALERT.padding,
-            spacing = ALERT.gap,
+            width = DIALOG.width,
+            radius = DIALOG.radius,
+            padding = DIALOG.padding,
+            spacing = DIALOG.gap,
             align_h = "center",
             align_v = "center",
             opacity = 1,
             scale = 1,
-            -- not in the kit: alerts scale up a little as they appear
+            -- not in the kit: dialogs scale up a little as they appear
             animate = { opacity = { duration = 150, from = 0 }, scale = theme.motion_with("snappy", { from = 1.06 }) },
             on_click = function() end,
             children = kids,
         })) },
     }
 end, {
-    -- Escape is the alert's Cancel: the first plain button, as in native apps.
+    -- Escape is the dialog's Cancel: the first plain button, as in native apps.
     escape = function()
-        overlay.close("glass_alert")
+        overlay.close("glass_dialog")
         for _, b in ipairs(spec.buttons or {}) do
-            if b.kind ~= "default" and b.kind ~= "destructive" then
+            if b.kind ~= "primary" and b.kind ~= "destructive" then
                 if b.on_click then
                     b.on_click()
                 end
@@ -141,31 +143,37 @@ end, {
     end,
 })
 
--- Alert: window modal; every button closes it, then runs its `on_click`.
----@class glass.AlertButton
+-- Dialog: window modal; every button closes it, then runs its `on_click`.
+---@class glass.DialogButton
 ---@field label string
----@field kind? "default"|"destructive"|string "default" is the preferred accent button, "destructive" red, anything else plain.
+---@field kind? "primary"|"destructive"|"plain" "primary" is the preferred accent button, "destructive" red, "plain" (default) the cancel.
 ---@field on_click? fun()
 ---@field [string] "no such property"
 
----@class glass.AlertOpts
----@field icon? string Lucide name.
+---@class glass.DialogOpts
+---@field icon? string A shared icon name or a Lucide name.
 ---@field title string
----@field message? string
----@field buttons? glass.AlertButton[] In the order shown.
+---@field message? string|Node Supporting text, or any node.
+---@field buttons? glass.DialogButton[] In the order shown. Default one "OK".
 ---@field suppression? { label?: string, value?: StateSignal<boolean> } A "do not show again" checkbox.
 ---@field window? string The window or panel it opens over; default `core.window`.
 ---@field [string] "no such property"
 
----@param opts glass.AlertOpts
-function M.open_alert(opts)
+---@param opts glass.DialogOpts
+function M.open_dialog(opts)
     spec = opts
-    overlay.open("glass_alert", nil, opts.window)
+    overlay.open("glass_dialog", nil, opts.window)
 end
 
 overlay.layer("glass_sheet", function()
     local close = function() overlay.close("glass_sheet") end
-    local content = type(spec.sheet.content) == "function" and spec.sheet.content(close) or spec.sheet.content
+    local sheet = spec.sheet
+    local content = type(sheet.content) == "function" and sheet.content(close) or sheet.content
+    local body = { sheet.title and text(sheet.title, c.vibrant_label, "headline", material.vibrant({ width = "fill", wrap = "word" })) or nil }
+    for _, node in ipairs(#content > 0 and content or { content }) do
+        body[#body + 1] = node
+    end
+    local side = sheet.side == "side"
     return rect {
         id = "glass_sheet",
         width = "fill",
@@ -175,10 +183,12 @@ overlay.layer("glass_sheet", function()
         on_click = function() end,
         animate = { opacity = { duration = 150, from = 0 }, exit = { duration = 120, opacity = 0 } },
         children = { column(core.shape {
-            width = spec.sheet.width or SHEET.width,
+            width = sheet.width or SHEET.width,
+            height = side and "fill" or nil,
+            margin = side and SHEET.margin or nil,
             radius = SHEET.radius,
             padding = SHEET.padding,
-            align_h = "center",
+            align_h = side and "end" or "center",
             align_v = "center",
             background = c.window_background,
             border_width = 1,
@@ -192,17 +202,20 @@ overlay.layer("glass_sheet", function()
             opacity = 1,
             translate = { x = 0, y = 0 },
             -- not in the kit: sheets drop in from above
-            animate = { opacity = { duration = 150, from = 0 }, translate = theme.motion_with("smooth", { from = { x = 0, y = -24 } }) },
+            animate = { opacity = { duration = 150, from = 0 }, translate = theme.motion_with("smooth", { from = side and { x = 24, y = 0 } or { x = 0, y = -24 } }) },
             on_click = function() end,
-            children = { content },
+            spacing = 12,
+            children = body,
         }) },
     }
 end)
 
--- Sheet: laid out with the kit's 20 px padding; close it with the given `close` or `overlay.close("glass_sheet")`.
+-- Sheet: laid out with the kit's 20 px padding, children 12 px apart; close it with the given `close` or `overlay.close("glass_sheet")`.
 ---@class glass.SheetOpts
----@field content Node|fun(close: fun()): Node
+---@field content Node|Node[]|fun(close: fun()): Node|Node[]
+---@field title? string A headline above the content.
 ---@field width? number Default 390.
+---@field side? "bottom"|"side" `"side"` is a full-height sheet at the trailing edge; anything else is the centred sheet (glass has no bottom sheet).
 ---@field window? string The window or panel it opens over; default `core.window`.
 ---@field [string] "no such property"
 
