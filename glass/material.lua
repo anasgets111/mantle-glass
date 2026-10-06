@@ -231,6 +231,9 @@ local function resolve(style, dark, tint)
     return out
 end
 
+-- Resolved looks, built once per style, appearance and tint: a scheme change re-reads every glass node.
+local looks = {}
+
 -- Spreads glass `style` (a name, or a signal of one) onto `props`, live across light and dark.
 -- `opts.tint` (colour or signal) colours `small_tinted`. Extra `opts.shadows` (a signal of a list, e.g. a focus ring) go on top.
 ---@param style string|Signal<string>
@@ -244,12 +247,21 @@ function M.glass(style, props, opts)
     local style_signal = type(style) == "userdata" and style or theme.dark:map(function() return style end)
     local look = computed({ style_signal, theme.dark, tint_signal, opts.shadows or theme.dark:map(function() return {} end) },
         function(name, dark, t, extra)
-            local r = resolve(name, dark, t)
-            for i, layer in ipairs(extra or {}) do
-                table.insert(r.shadows, i, layer)
+            local key = ("%s|%s|%s"):format(name, tostring(dark), tostring(t))
+            local base = looks[key]
+            if not base then
+                base = resolve(name, dark, t)
+                base.behind = M.STYLES[name].behind or false
+                looks[key] = base
             end
-            r.behind = M.STYLES[name].behind or false
-            return r
+            if not extra or #extra == 0 then
+                return base
+            end
+            local shadows = { table.unpack(extra) }
+            for _, layer in ipairs(base.shadows) do
+                shadows[#shadows + 1] = layer
+            end
+            return { background = base.background, shadows = shadows, effect = base.effect, behind = base.behind }
         end)
     props.background = look:map(function(r) return r.background end)
     props.shadows = look:map(function(r) return r.shadows end)

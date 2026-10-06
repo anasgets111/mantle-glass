@@ -52,7 +52,7 @@ function M.button(id, opts)
         name = opts.name or (type(opts.label) == "string" and opts.label) or opts.icon,
         on_click = on_click,
         -- not in the kit: 4 px between glyph and label (the kit's label starts with an SF symbol and a space)
-        props = core.merge({ spacing = 4, align_h = "center" }, opts.props),
+        props = core.merge({ spacing = 4 }, opts.props),
     }, function(label)
         local vib = buttons.vibrant({ kind = kind, on_glass = opts.on_glass })
         local kids = {}
@@ -61,6 +61,12 @@ function M.button(id, opts)
         end
         if opts.label then
             kids[#kids + 1] = text(opts.label, label, size.label, vib)
+        end
+        -- A fixed width centres the content with a spacer each side: a row's `align_h` would also
+        -- centre the button itself in its parent.
+        if opts.width or icon_only then
+            table.insert(kids, 1, rect { width = "fill" })
+            kids[#kids + 1] = rect { width = "fill" }
         end
         return kids
     end)
