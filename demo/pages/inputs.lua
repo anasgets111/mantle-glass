@@ -1,10 +1,14 @@
--- Text input: text fields, search fields and combo boxes.
+-- Text input: text fields, text views, search fields and combo boxes.
 local section = require("demo.section")
 local glass = require("glass")
 
 local c = glass.theme.c
 local material = glass.material
 local on_wall = section.on_wall
+
+local notes = state("demo_inputs_notes", "Line one\nLine two")
+local draft = state("demo_inputs_draft", "")
+local sent = state("demo_inputs_sent", "")
 
 -- Every cell is as tall as the biggest control, so controls of any size share a centre line and caption row.
 local CELL = 36
@@ -69,5 +73,26 @@ return section.page {
             labelled("disabled", (glass.combo_box("cb_off", { items = FRUITS, value = state("demo_inputs_cb_off", "Apple"), width = 160, disabled = true }))),
         }),
         line(combos),
+    } }),
+    section.section("Text views", "Several lines that grow to a limit, then scroll. Return breaks the line and Ctrl+Return sends; the chat one sends on Return.", column { spacing = 16, children = {
+        (glass.text_view("tv_notes", { value = notes, placeholder = "Notes", min_lines = 3, max_lines = 6 })),
+        line({
+            labelled("chat", column { width = 320, spacing = 6, children = {
+                (glass.text_view("tv_chat", {
+                    value = draft,
+                    placeholder = "Message",
+                    min_lines = 1,
+                    max_lines = 4,
+                    submit_key = "return",
+                    on_submit = function(t)
+                        if t:match("%S") then
+                            sent:set(t)
+                            draft:set("")
+                        end
+                    end,
+                })),
+            } }),
+            labelled("last sent", glass.text(sent:map(function(t) return t == "" and "nothing yet" or t end), c.secondary_label, "body", { wrap = "word", width = 280 })),
+        }),
     } }),
 }

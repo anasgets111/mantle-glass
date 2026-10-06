@@ -8,7 +8,8 @@ local material = glass.material
 local M = {}
 
 -- A wallpaper for glass to sit on: glass only shows over content.
-M.WALL = "/mnt/Work/1Wallpapers/Main/evening_reflections.jpg"
+M.WALLS = mantle.config_dir .. "/demo/wallpapers/"
+M.WALL = M.WALLS .. "dusk.svg"
 
 -- Sections are cards of one width that wrap side by side; a wide one takes a row of its own.
 local CARD = 780

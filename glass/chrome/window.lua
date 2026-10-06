@@ -75,15 +75,25 @@ end
 -- A press on empty chrome moves the window; a right press opens the compositor's window menu.
 -- Drag areas sit behind the chrome's controls, never around them, so a control's press stays its own.
 -- An inline preview (no `id`) has none.
+-- A second press within `DOUBLE` ms zooms the window instead of moving it, as a double-click on a
+-- native title bar does (not in the kit: the interval).
+local DOUBLE = 400
 local function drag_area(id)
+    local armed = false
     return rect {
         width = "fill",
         height = "fill",
         on_press = id and function(_, button)
-            if button == "left" then
-                toplevel(id):move()
-            elseif button == "right" then
-                toplevel(id):show_menu()
+            local win = toplevel(id)
+            if button == "right" then
+                win:show_menu()
+            elseif button == "left" and armed then
+                armed = false
+                win:set_maximized(not win:state():get().maximized)
+            elseif button == "left" then
+                armed = true
+                timer(DOUBLE, function() armed = false end)
+                win:move()
             end
         end,
     }

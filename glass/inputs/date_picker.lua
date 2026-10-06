@@ -30,7 +30,7 @@ local PARTS = {
 
 -- What an emptied part shows.
 local BLANK = { month = "mm", day = "dd", year = "yyyy", hour = "hh", minute = "mm" }
-local IDLE = { part = "", from = "", buf = "" }
+local IDLE = { part = "", buf = "" }
 
 local M = {}
 
@@ -289,17 +289,18 @@ function M.date_picker(id, opts)
     end
 
     local sel = state("glass_date_part_" .. id, "day")
-    -- Digit entry: `part` takes the digits (it may be one past the part `from` that holds the key
-    -- focus, as focus cannot move itself), `buf` the digits typed so far, `blank` an emptied part.
+    -- Digit entry in the focused `part`: `buf` the digits typed so far, `blank` an emptied part. A
+    -- full part hands the focus to the next.
     local typing = state("glass_date_typing_" .. id, IDLE)
     local order = time and { "month", "/", "day", "/", "year", " ", "hour", ":", "minute" } or { "month", "/", "day", "/", "year" }
-    local focus = {}
+    local focus, targets = {}, {}
     local any = {}
     local names, at = {}, {}
     for _, name in ipairs(order) do
         if PARTS[name] then
             names[#names + 1], at[name] = name, #names + 1
             focus[name] = focused("glass_dp_focus_" .. id .. name)
+            targets[name] = focus_target("glass_dp_target_" .. id .. name)
             any[#any + 1] = focus[name]
         end
     end
@@ -311,9 +312,8 @@ function M.date_picker(id, opts)
         end
         return false
     end)
-    local function type_digit(own, d)
+    local function type_digit(part, d)
         local t = typing:get()
-        local part = t.from == own and t.part ~= "" and t.part or own
         local v = value:get() or now()
         local lo, hi = PARTS[part][1], PARTS[part][2] or days_in(v.year, v.month)
         local buf = (t.part == part and t.buf or "") .. d
@@ -328,15 +328,18 @@ function M.date_picker(id, opts)
             out.day = math.min(out.day, days_in(out.year, out.month))
             commit(out)
         end
-        local nxt = full and names[(at[part] or #names) + 1] or part
-        sel:set(nxt)
-        typing:set({ part = nxt, from = own, buf = full and "" or buf })
+        local nxt = full and names[(at[part] or #names) + 1]
+        if nxt then
+            sel:set(nxt)
+            typing:set(IDLE)
+            targets[nxt]:request()
+        else
+            typing:set({ part = part, buf = full and "" or buf })
+        end
     end
-    local function blank(own)
-        local t = typing:get()
-        local part = t.from == own and t.part ~= "" and t.part or own
+    local function blank(part)
         sel:set(part)
-        typing:set({ part = part, from = own, buf = "", blank = true })
+        typing:set({ part = part, buf = "", blank = true })
     end
 
     local kids = {}
@@ -358,9 +361,13 @@ function M.date_picker(id, opts)
                 radius = 3,
                 align_v = "center",
                 focused = focus[name],
+                focus_target = targets[name],
                 on_key = function(k)
                     if disabled:get() then
                         return
+                    end
+                    if typing:get().part ~= name then
+                        typing:set(IDLE)
                     end
                     local dir = ({ Up = 1, Down = -1 })[k.name]
                     if dir then
@@ -383,9 +390,6 @@ function M.date_picker(id, opts)
             end)
             local look = computed({ focus[name], anyfocus, sel, typing, disabled, active, theme.scheme }, function(f, any_f, s, t, off, a, p)
                 local on = f or (not any_f and s == name)
-                if t.part ~= "" then
-                    on = t.part == name
-                end
                 if on and not off then
                     return { fill = a and p.accent or p.inactive_selected_fill, label = a and p.on_accent or p.label }
                 end

@@ -9,6 +9,8 @@ local c, CLEAR, icon = theme.c, theme.CLEAR, core.icon
 
 local M = {}
 
+local ON = theme.dark:map(function() return true end)
+
 -- Close, minimise, zoom: 14 px dots on a 23 px pitch, grey while the window is inactive. Hovering
 -- the group colours them and shows their glyphs (not in the kit; as native apps draw them). A utility
 -- panel's are 10 px on a 17 px pitch.
@@ -27,17 +29,28 @@ function M.traffic_lights(opts)
     local active = opts.active or core.active(opts.window)
     local over = hover("glass_lights_" .. (opts.window or "app"))
     local lit = computed({ active, over }, function(on, h) return on or h end)
-    local function dot(role, glyph, run, label)
+    -- A real window asks the compositor; one it refuses greys out. Previews (`active` given) only draw.
+    local win = not opts.active and opts.window and toplevel(opts.window)
+    local can = win and win:state():map(function(s) return s.capabilities end)
+    local function allowed(cap)
+        return can and can:map(function(caps) return caps[cap] ~= false end) or ON
+    end
+    local function dot(role, glyph, run, label, enabled)
+        enabled = enabled or ON
         return rect(core.shape {
             width = utility and 10 or 14,
             height = utility and 10 or 14,
             radius = utility and 5 or 7,
-            background = computed({ lit, theme.scheme }, function(on, p) return on and p[role] or p.traffic_inactive end),
+            background = computed({ lit, enabled, theme.scheme }, function(on, ok, p) return on and ok and p[role] or p.traffic_inactive end),
             shadows = { { color = "#00000073", spread = 0.5, inset = true } },
             accessible_name = label,
             focus_ring = false,
             cursor = "default",
-            on_click = run,
+            on_click = function(...)
+                if run and enabled:get() then
+                    run(...)
+                end
+            end,
             animate = { background = theme.motion.fade },
             children = {
                 icon(glyph, "#00000099", utility and 5 or 7, {
@@ -47,15 +60,26 @@ function M.traffic_lights(opts)
             },
         })
     end
-    -- ponytail: minimise and zoom stay inert until the engine can ask the compositor for them.
+    -- Liquid Glass: the green light toggles full screen; with Option (Alt) it zooms.
+    local function zoom(_, _, _, mods)
+        if not win then
+            return
+        end
+        local s = win:state():get()
+        if mods and mods.alt then
+            win:set_maximized(not s.maximized)
+        else
+            win:set_fullscreen(not s.fullscreen)
+        end
+    end
     return row {
         spacing = utility and 7 or 9,
         align_v = "center",
         hover = over,
         children = {
             dot("traffic_close", "x", opts.on_close, "Close"),
-            dot("traffic_minimize", "minus", nil, "Minimise"),
-            dot("traffic_zoom", "maximize-2", nil, "Zoom"),
+            dot("traffic_minimize", "minus", win and function() win:set_minimized() end, "Minimise", allowed("minimize")),
+            dot("traffic_zoom", "maximize-2", win and zoom, "Zoom", allowed("fullscreen")),
         },
     }
 end

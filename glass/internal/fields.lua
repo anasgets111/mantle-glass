@@ -4,6 +4,7 @@ local theme = require("glass.theme")
 local core = require("glass.core")
 local material = require("glass.material")
 local buttons = require("glass.internal.buttons")
+local menu = require("glass.overlays.menu")
 
 local M = {}
 
@@ -23,11 +24,14 @@ local ROLES = {
 }
 
 -- The engine textfield. o: size, value (state), placeholder, disabled, max_length, vibrant, name,
--- on_change, on_submit. Returns the node and { value, focus() }.
+-- on_change, on_submit, and for several lines multiline, min_lines, max_lines, submit_key.
+-- Returns the node and { value, focus() }.
 function M.input(id, o)
+    local style = theme.type[M.SIZES[o.size or "regular"].type]
     local name = "glass_field_" .. id
     local value = o.value or state(name, "")
     local target = focus_target(name)
+    local selected = has_selection(name)
     local disabled = buttons.signal(o.disabled or false)
     local roles = ROLES[o.vibrant and "vibrant" or "plain"]
     local draft = value:get() or ""
@@ -44,11 +48,16 @@ function M.input(id, o)
     end
     local node = textfield {
         width = "fill",
-        height = "fill",
+        height = not o.multiline and "fill" or nil,
+        multiline = o.multiline,
+        min_lines = o.min_lines,
+        max_lines = o.max_lines,
+        submit_key = o.submit_key,
         font = theme.FONT,
         font_size = M.SIZES[o.size or "regular"].font,
-        font_weight = theme.type[M.SIZES[o.size or "regular"].type][2],
-        letter_spacing = theme.type[M.SIZES[o.size or "regular"].type][4],
+        font_weight = style[2],
+        letter_spacing = style[4],
+        line_height = o.multiline and style[3] / style[1] or nil,
         foreground = role(1),
         placeholder = o.placeholder,
         placeholder_color = role(2),
@@ -67,6 +76,32 @@ function M.input(id, o)
         accessible_name = o.name or o.placeholder or id,
         focus_ring = false,
         focus_target = target,
+        -- The native Edit menu on a right click; Cut and Copy need a selection.
+        on_click = function(r, button, p)
+            if button ~= "right" or disabled:get() then
+                return
+            end
+            target:request()
+            local function act(verb)
+                return function()
+                    target:request()
+                    target[verb](target)
+                end
+            end
+            local has = selected:get()
+            menu.open_menu({
+                at = { x = r.x + p.x, y = r.y + p.y },
+                id = "edit_" .. id,
+                window = o.window,
+                items = {
+                    { label = "Cut", shortcut = "⌘X", disabled = not has, on_click = act("cut") },
+                    { label = "Copy", shortcut = "⌘C", disabled = not has, on_click = act("copy") },
+                    { label = "Paste", shortcut = "⌘V", on_click = act("paste") },
+                    { separator = true },
+                    { label = "Select All", shortcut = "⌘A", on_click = act("select_all") },
+                },
+            })
+        end,
         on_change = function(t)
             if kept and t == "" then
                 kept = false
@@ -93,7 +128,8 @@ end
 
 -- The input box: a row of `children` with the kit's fill, 1 px outside border and focus ring (3.5
 -- px outside and 1 px inside, accent at 50%). o: size, width, padding, disabled, focus (the
--- `focus` of `input`), glass (sits on `material.glass("small")`: the toolbar search), geometry.
+-- `focus` of `input`), glass (sits on `material.glass("small")`: the toolbar search), geometry,
+-- grow (the height follows a multiline field instead of the control size).
 function M.box(id, o, children)
     local disabled = buttons.signal(o.disabled or false)
     local focus = focused("glass_focus_" .. id)
@@ -101,10 +137,10 @@ function M.box(id, o, children)
     local props = {
         id = id,
         width = o.width,
-        height = theme.SIZES[size].height,
+        height = not o.grow and theme.SIZES[size].height or nil,
         radius = o.glass and theme.CAPSULE or M.SIZES[size].radius,
         padding = o.padding,
-        align_v = "center",
+        align_v = o.grow and "start" or "center",
         focused = focus,
         geometry = o.geometry,
         on_click = function()

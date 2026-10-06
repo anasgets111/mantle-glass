@@ -21,7 +21,7 @@ local d3 = state("demo_pick_cal", { year = 2026, month = 10, day = 5 })
 local d4 = state("demo_pick_pop", { year = 2026, month = 12, day = 24 })
 local tokens = state("demo_pick_tokens", { "Design", "Lua" })
 local picked = state("demo_pick_path", "")
-local OTHER_WALL = "/mnt/Work/1Wallpapers/Main/4k-cyberpunk.jpg"
+local OTHER_WALL = section.WALLS .. "ember.svg"
 local well_image = state("demo_pick_well", section.WALL)
 local rating = state("demo_pick_rating", 3)
 local level = state("demo_pick_level", 0.55)

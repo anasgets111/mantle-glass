@@ -46,6 +46,7 @@ return {
     search_field = require("glass.inputs.search_field").search_field,
     combo_box = require("glass.inputs.combo_box").combo_box,
     token_field = require("glass.inputs.token_field").token_field,
+    text_view = require("glass.inputs.text_view").text_view,
     date_picker = require("glass.inputs.date_picker").date_picker,
     calendar = require("glass.inputs.date_picker").calendar,
     path_control = require("glass.inputs.path_control").path_control,

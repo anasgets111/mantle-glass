@@ -1,15 +1,15 @@
-# glass: Liquid Glass for Mantle
+# glass
 
-Liquid Glass controls for a Mantle config, built from Apple's UI kit. Every
-size, colour, glass layer and shadow comes from the kit; values it lacks are marked
-`not in the kit` where they are set.
+The `glass` module of [mantle-glass](../README.md): Liquid Glass controls for a
+Mantle config. Sizes, colours, glass layers and shadows follow Liquid Glass's design; values that had to
+be chosen are marked `not in the kit` where they are set.
 
 ## Requirements
 
-A Mantle build with `effect` (backdrop blur and saturate), layered `background` and `shadows` with
-per-layer `blend`, inset shadows, node `blend` and `effect.shader` with `input = "backdrop"`
-(refraction, `glass/lens.frag`; set `glass.material.LENS` if `glass/` is not in the config root). Fonts: Inter (stands in for SF
-Pro) and Lucide (`ttf-lucide-font`, stands in for SF Symbols).
+Mantle newer than v0.4.0 (main at `0ae7b857` or later): the glass, focus, multiline and edit features
+it uses are not in a release yet. Fonts: Inter and Inter Display (standing in for SF Pro) and Lucide
+(`ttf-lucide-font`, standing in for SF Symbols). Set `glass.material.LENS` if `glass/` is not in the
+config root.
 
 ## Setup
 
@@ -247,6 +247,14 @@ Each returns `node, { value, focus() }`; wrap the call in parentheses to keep on
 | `text_field(id, opts)` | `value`, `size`, `width` (120), `placeholder`, `disabled`, `max_length`, `on_change(text)`, `on_submit(text)`, `name`, `props`. Escape passes to the window |
 | `search_field(id, opts)` | As `text_field`, plus `toolbar` (on small glass; `size` `"regular"` or `"xl"`, width 149 or 159). `placeholder` defaults to `"Search"`; shows a clear button once filled; Escape clears |
 | `combo_box(id, opts)` | As `text_field`, plus `items` (strings; a pick fills the field and calls `on_change`) |
+
+#### inputs/text_view.lua (`text_view`)
+
+Several lines in the text field's box, growing from `min_lines` (3) to `max_lines` (0, no limit) and then scrolling inside. Returns the node and a handle, as `text_field`.
+
+| Function | opts |
+| :--- | :--- |
+| `text_view(id, opts)` | `value` (state string; lines split on `\n`), `placeholder`, `min_lines`, `max_lines`, `submit_key` (`"ctrl+return"` default: Return breaks the line; `"return"`: Return submits and Shift+Return breaks, for a chat box), `width` (default `"fill"`), `size`, `disabled`, `max_length`, `on_change(text)`, `on_submit(text)`, `window`, `name`, `props` |
 
 #### inputs/token_field.lua (`token_field`)
 

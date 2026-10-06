@@ -1,5 +1,5 @@
 -- Liquid Glass on Mantle: every control of the glass library, page by page, in a Liquid Glass window.
--- Run: mantle -c /mnt/Work/1Progs/glass-demo
+-- Run from the repo root: mantle -c .
 fonts { "Inter", "lucide", "Noto Sans", "Noto Color Emoji" }
 
 local glass = require("glass")
