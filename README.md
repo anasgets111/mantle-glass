@@ -1,5 +1,9 @@
 # mantle-glass
 
+![The demo's Menu Bar & Dock page with a glass menu open over the desktop](docs/screenshot.png)
+
+![The demo's Buttons page: push buttons, sizes, pop-ups, colour wells, controls over glass and toolbar groups](docs/screenshot-2.png)
+
 A Liquid Glass component library for the [Mantle](https://github.com/anasgets111/mantle)
 shell engine, with a demo app that shows every component.
 
