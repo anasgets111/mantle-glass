@@ -4,6 +4,7 @@ local theme = require("glass.theme")
 local core = require("glass.core")
 local material = require("glass.material")
 local sig = require("glass.internal.toggles").sig
+local menu = require("glass.overlays.menu")
 
 local c, CLEAR, icon = theme.c, theme.CLEAR, core.icon
 
@@ -85,17 +86,25 @@ function M.traffic_lights(opts)
 end
 
 -- One toolbar glyph button inside a group: 28 (or 20) square, a pill while held or selected.
-local function glyph_button(id, item, inner, active, wide)
+local function glyph_button(id, item, inner, active, wide, window)
     local off = sig(item.disabled or false)
+    local anchor = item.menu and geometry("glass_toolbar_menu_" .. id)
     local props = {
+        geometry = anchor,
         width = wide or inner,
         height = inner,
         radius = inner / 2,
         align_v = "center",
         accessible_name = item.label,
         on_click = function()
-            if item.on_click and not off:get() then
+            if off:get() then
+                return
+            end
+            if item.on_click then
                 item.on_click()
+            end
+            if item.menu then
+                menu.open_menu({ anchor = anchor, items = item.menu, align = "end", window = window })
             end
         end,
     }
@@ -118,6 +127,7 @@ end
 ---@field icon string
 ---@field label? string
 ---@field on_click? fun()
+---@field menu? glass.MenuItem[] Opens under the button when clicked.
 ---@field selected? boolean|Signal<boolean>
 ---@field disabled? boolean|Signal<boolean>
 ---@field [string] "no such property"
@@ -138,7 +148,7 @@ function M.toolbar_group(id, opts)
     local active = opts.active or core.active(opts.window)
     local kids = {}
     for i, item in ipairs(opts.items) do
-        kids[i] = glyph_button(id .. "_" .. i, item, inner, active)
+        kids[i] = glyph_button(id .. "_" .. i, item, inner, active, nil, opts.window)
     end
     return row(material.glass(material.by_activity("small", active), {
         height = inner + 2 * pad,

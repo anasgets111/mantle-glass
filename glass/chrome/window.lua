@@ -279,7 +279,59 @@ local CHROME_PROPS = {
     subtitle = true, toolbar = true, leading = true, trailing = true, scroll_edge = true, sidebar = true, child = true,
     sidebar_shown = true, inspector = true, inspector_shown = true, inspector_width = true, kind = true, tabs = true,
     tab = true, on_new_tab = true, on_close_tab = true, min_content = true, preview = true, active = true,
+    navigation = true, actions = true,
 }
+
+-- The shared `navigation` and `actions` (the same shape in m3) as a sidebar and a toolbar group.
+local function shared_chrome(props)
+    if not (props.navigation or props.actions) then
+        return props
+    end
+    local p = core.merge({}, props)
+    local nav = props.navigation
+    if nav and not p.sidebar then
+        local items = {}
+        for i, item in ipairs(nav.items) do
+            local badge = item.badge
+            items[i] = {
+                name = item.name,
+                label = item.label or item.name,
+                icon = item.icon,
+                count = type(badge) == "userdata" and (badge --[[@as Signal<integer>]]):map(function(n) return n and n > 0 and tostring(n) or nil end)
+                    or (badge and badge > 0 and tostring(badge) or nil),
+            }
+        end
+        p.sidebar = require("glass.views.sidebar").sidebar(props.id .. "_nav", {
+            value = nav.value,
+            on_select = nav.on_select,
+            window = props.id,
+            active = props.active ~= nil and sig(props.active) or nil,
+            sections = { { header = nav.header, items = items } },
+        })
+    end
+    if props.actions then
+        local trailing = { toolbar.toolbar_group(props.id .. "_actions", { items = props.actions, window = props.id }) }
+        for _, node in ipairs(props.trailing or {}) do
+            trailing[#trailing + 1] = node
+        end
+        p.trailing = trailing
+    end
+    return p
+end
+
+---@class glass.NavigationItem
+---@field name string Selection key.
+---@field label? string Default the name.
+---@field icon? string A shared icon name or a Lucide name.
+---@field badge? integer|Signal<integer> A count shown when above 0.
+---@field [string] "no such property"
+
+---@class glass.WindowNavigation
+---@field items glass.NavigationItem[]
+---@field value StateSignal<string> The selected item's name.
+---@field header? string
+---@field on_select? fun(name: string)
+---@field [string] "no such property"
 
 -- The chrome fields, shared by `app_window` and the inline `window_frame`.
 ---@class glass.WindowFrameProps
@@ -301,6 +353,8 @@ local CHROME_PROPS = {
 ---@field tab? StateSignal<string> The selected tab: a utility panel's value (else label), a window tab's name; default the first.
 ---@field on_new_tab? fun() The + of a window's tab bar.
 ---@field on_close_tab? fun(name: string) The close button of a window tab. The app removes the tab and picks the next.
+---@field navigation? glass.WindowNavigation Shared with m3: the app's destinations, drawn here as the sidebar (unless `sidebar` is given).
+---@field actions? glass.ToolbarItem[] Shared with m3: `{ icon, label?, on_click?, menu? }` buttons, a glass group at the toolbar's end.
 ---@field child? Node The content, which scrolls under the floating toolbar.
 ---@field on_close? fun()
 ---@field preview? boolean Inline preview: no window behind it, so no drag, menu or focus; looks active unless `active` says otherwise.
@@ -311,6 +365,7 @@ local CHROME_PROPS = {
 ---@param props glass.WindowFrameProps
 ---@return Node
 function M.window_frame(props)
+    props = shared_chrome(props)
     local id, preview = props.id, props.preview
     local utility = props.kind == "utility"
     local active = props.active ~= nil and sig(props.active) or (preview and ON or M.active(id))

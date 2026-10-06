@@ -92,6 +92,7 @@ end
 
 ---@class glass.ProgressRingOpts
 ---@field value? number|Signal<number> 0..1.
+---@field indeterminate? boolean|Signal<boolean> The spinner in place of the ring, as this platform shows indefinite waits.
 ---@field size? "s"|"m" 16 or 32 px.
 ---@field on_glass? boolean
 ---@field name? string Accessible name; default "progress" ("loading" for the spinner).
@@ -113,7 +114,7 @@ function M.progress_ring(_, opts)
         extra.commands = commands
         return path(extra)
     end
-    return rect {
+    local ring = rect {
         width = s.d,
         height = s.d,
         accessible_name = opts.name or "progress",
@@ -127,6 +128,15 @@ function M.progress_ring(_, opts)
             },
         },
     }
+    local ind = opts.indeterminate
+    if not ind then
+        return ring
+    end
+    local spin = M.spinner(nil, { size = opts.size, name = opts.name, window = opts.window })
+    if type(ind) ~= "userdata" then
+        return spin
+    end
+    return rect { children = (ind --[[@as Signal<boolean>]]):map(function(on) return { on and spin or ring } end) }
 end
 
 -- The lead spoke steps round the circle clockwise.

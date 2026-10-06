@@ -115,9 +115,9 @@ Liquid Glass window chrome. `app_window` frames an app, registers the window's o
 
 | Function | opts |
 | :--- | :--- |
-| `app_window(props)` | `id` (required; also the overlay host id), `title`, `subtitle`, `app_id`, `min_size`, `max_size`, `on_close`; `toolbar` (`"unified"` default, `"compact"`, `"titlebar"`); `leading`, `trailing` (lists of toolbar nodes either side of the title); `scroll_edge` (`"soft"` default fade, `"hard"` blurred band with a hairline); `sidebar` (node for the 256 px glass pane; traffic lights move into it); `child` (content; scrolls under the toolbar) |
+| `app_window(props)` | `id` (required; also the overlay host id), `title`, `subtitle`, `app_id`, `min_size`, `max_size`, `on_close`; `toolbar` (`"unified"` default, `"compact"`, `"titlebar"`); `leading`, `trailing` (lists of toolbar nodes either side of the title); `scroll_edge` (`"soft"` default fade, `"hard"` blurred band with a hairline); `sidebar` (node for the 256 px glass pane; traffic lights move into it); `child` (content; scrolls under the toolbar) Shared with m3: `navigation = { items = { { name, label?, icon?, badge? } }, value, header?, on_select? }` draws the sidebar (unless `sidebar` is given), and `actions = { { icon, label?, on_click?, menu? } }` a toolbar group at the end. |
 | `traffic_lights(opts)` | `on_close`, `window`. Minimise and zoom are inert |
-| `toolbar_group(id, opts)` | `items` (required; `{ icon, label, on_click, selected }`, `selected` bool or signal), `size` (`"xl"` default, `"m"`), `window` |
+| `toolbar_group(id, opts)` | `items` (required; `{ icon, label, on_click, selected }`, `selected` bool or signal), `size` (`"xl"` default, `"m"`), `window` Items also take `menu` (menu items opened under the button) and `disabled`. |
 | `toolbar_button(id, opts)` | One item's fields (`icon`, `label`, `on_click`, `selected`) plus `size`, `window` |
 
 A press on empty chrome moves the window, right press opens the window menu, and the edges resize. `window.active` aliases `core.active`.
@@ -220,7 +220,7 @@ Fills go grey while the window is inactive. `size` here is only `"s"` or `"m"`. 
 | Function | opts |
 | :--- | :--- |
 | `progress_bar(_, opts)` | `value` (0..1 number or signal), `indeterminate` (signal boolean), `size` (6 or 10 px), `width` (140), `on_glass`, `window` |
-| `progress_ring(_, opts)` | `value` (0..1), `size` (16 or 32 px), `on_glass`, `window` |
+| `progress_ring(_, opts)` | `value` (0..1), `size` (16 or 32 px), `on_glass`, `window` `indeterminate` (boolean or signal) shows the spinner instead, as this platform draws indefinite waits. |
 | `spinner(_, opts)` | `size` (16 or 32 px), `window` |
 
 #### controls/level_indicator.lua (`level_indicator`)
